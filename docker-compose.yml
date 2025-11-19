@@ -1,0 +1,17 @@
+version: '3.4'
+
+services:
+  documentgenerator.api:
+    image: documentgenerator-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/documentgenerator.db
+      - JwtSettings__Secret=THIS_IS_A_SUPER_SECRET_KEY_FOR_JWT_TOKEN_GENERATION_AT_LEAST_32_CHARS
+    volumes:
+      - ./data:/app/data
+      - ./GeneratedDocuments:/app/GeneratedDocuments
