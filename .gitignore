@@ -9,3 +9,13 @@ obj/
 *.db-wal
 GeneratedDocuments/
 TestResults/
+
+# AI Agent Files
+.gemini/
+.cursor/
+.windsurf/
+.aider/
+.copilot/
+.claude/
+.agent/
+AGENTS.md

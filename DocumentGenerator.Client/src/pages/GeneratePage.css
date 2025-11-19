@@ -1,0 +1,26 @@
+.generate-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.template-code {
+  background: var(--bg-tertiary);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  overflow-x: auto;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  max-height: 500px;
+  overflow-y: auto;
+  margin: 0;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+@media (max-width: 968px) {
+  .generate-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,40 @@
+.documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.document-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  transition: all var(--transition-base);
+}
+
+.document-card:hover {
+  transform: translateX(4px);
+}
+
+.document-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.document-info {
+  flex: 1;
+}
+
+.document-info h3 {
+  margin-bottom: var(--space-xs);
+}
+
+.document-meta {
+  display: flex;
+  gap: var(--space-sm);
+  font-size: 0.9rem;
+}
+
+.document-actions {
+  flex-shrink: 0;
+}
