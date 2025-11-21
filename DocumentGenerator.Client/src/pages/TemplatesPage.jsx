@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { templateService } from '../services/templateService';
 import Navbar from '../components/Navbar';
+import TemplateEditor from '../components/TemplateEditor';
+import VisualBuilder from '../components/VisualBuilder';
 import './TemplatesPage.css';
 
 export default function TemplatesPage() {
@@ -11,6 +13,7 @@ export default function TemplatesPage() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', content: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'code'
 
   useEffect(() => {
     loadTemplates();
@@ -101,22 +104,43 @@ export default function TemplatesPage() {
                   placeholder="Invoice Template"
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="content">HTML Content</label>
-                <textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) =>
-                    setFormData({ ...formData, content: e.target.value })
-                  }
-                  required
-                  placeholder="<h1>{{title}}</h1><p>{{content}}</p>"
-                  rows={12}
-                />
-                <small className="text-muted">
-                  Use double curly braces for variables: {'{{'} variableName {'}}'}
-                </small>
-              </div>
+                <div className="form-group">
+                  <div className="flex-between mb-sm">
+                    <label className="mb-0">Template Content</label>
+                    <div className="btn-group">
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${editorMode === 'visual' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setEditorMode('visual')}
+                      >
+                        Visual Builder
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${editorMode === 'code' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setEditorMode('code')}
+                      >
+                        Code Editor
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {editorMode === 'visual' ? (
+                    <VisualBuilder
+                      initialContent={formData.content}
+                      onChange={(newContent) =>
+                        setFormData({ ...formData, content: newContent })
+                      }
+                    />
+                  ) : (
+                    <TemplateEditor
+                      initialContent={formData.content}
+                      onChange={(newContent) =>
+                        setFormData({ ...formData, content: newContent })
+                      }
+                    />
+                  )}
+                </div>
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -142,10 +166,17 @@ export default function TemplatesPage() {
                     {new Date(template.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <pre className="template-preview">
-                  {template.content.substring(0, 200)}
-                  {template.content.length > 200 && '...'}
-                </pre>
+                <div className="template-preview-wrapper">
+                  <div className="template-preview-scale">
+                    <div 
+                      className="template-preview-content"
+                      dangerouslySetInnerHTML={{ 
+                        __html: template.content
+                          .replace(/{{(.*?)}}/g, '<span class="var-placeholder">$1</span>') 
+                      }}
+                    />
+                  </div>
+                </div>
                 <div className="template-actions flex gap-sm">
                   <Link
                     to={`/generate/${template.id}`}

@@ -1,0 +1,107 @@
+.template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  height: 600px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.btn-xs {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+}
+
+.editor-panes {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevent flex item overflow */
+}
+
+.code-pane {
+  border-right: 1px solid var(--border);
+}
+
+.pane-header {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+#template-code-editor {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: none;
+  border-radius: 0;
+  padding: var(--space-md);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+#template-code-editor:focus {
+  box-shadow: none;
+}
+
+.preview-pane {
+  background: var(--bg-tertiary);
+}
+
+.preview-container {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-lg);
+  display: flex;
+  justify-content: center;
+}
+
+.preview-paper {
+  width: 210mm;
+  min-height: 297mm;
+  background: white;
+  color: black;
+  padding: 20mm;
+  box-shadow: var(--shadow-lg);
+  transform-origin: top center;
+  transform: scale(0.6); /* Scale to fit in pane */
+}
+
+.preview-content {
+  font-size: 12pt;
+}
+
+.preview-content h1 { color: black; margin-bottom: 0.5em; }
+.preview-content p { margin-bottom: 1em; }
+
+.var-highlight {
+  background: rgba(0, 123, 255, 0.15);
+  color: #0056b3;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-family: monospace;
+}
