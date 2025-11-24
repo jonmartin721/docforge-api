@@ -48,7 +48,7 @@ namespace DocumentGenerator.API.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ITemplateService, TemplateService>();
             services.AddScoped<IDocumentService, DocumentService>();
-            services.AddScoped<IPdfService, PdfService>();
+            services.AddSingleton<IPdfService, PdfService>();
 
             // AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

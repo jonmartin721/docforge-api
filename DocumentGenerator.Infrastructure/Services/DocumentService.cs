@@ -69,34 +69,34 @@ namespace DocumentGenerator.Infrastructure.Services
 
         public async Task<DocumentDto?> GetByIdAsync(Guid id, Guid userId)
         {
-            var document = await _context.Documents.FindAsync(id);
-            if (document == null || document.UserId != userId) return null;
+            var document = await _context.Documents
+                .Include(d => d.Template)
+                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
+
+            if (document == null) return null;
 
             var dto = _mapper.Map<DocumentDto>(document);
-            var template = await _context.Templates.FindAsync(document.TemplateId);
-            dto.TemplateName = template?.Name ?? "Unknown";
+            dto.TemplateName = document.Template?.Name ?? "Unknown";
             dto.DownloadUrl = $"/api/documents/{document.Id}/download";
-            
+
             return dto;
         }
 
         public async Task<IEnumerable<DocumentDto>> GetAllAsync(Guid userId)
         {
             var documents = await _context.Documents
+                .Include(d => d.Template)
                 .Where(d => d.UserId == userId)
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
 
-            var dtos = new List<DocumentDto>();
-            foreach (var doc in documents)
+            return documents.Select(doc =>
             {
                 var dto = _mapper.Map<DocumentDto>(doc);
-                var template = await _context.Templates.FindAsync(doc.TemplateId);
-                dto.TemplateName = template?.Name ?? "Unknown";
+                dto.TemplateName = doc.Template?.Name ?? "Unknown";
                 dto.DownloadUrl = $"/api/documents/{doc.Id}/download";
-                dtos.Add(dto);
-            }
-            return dtos;
+                return dto;
+            });
         }
 
         public async Task<(byte[] FileData, string FileName)?> GetDocumentFileAsync(Guid id, Guid userId)

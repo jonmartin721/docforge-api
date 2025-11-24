@@ -6,15 +6,28 @@ namespace DocumentGenerator.Infrastructure.Services
 {
     public class PdfService : IPdfService
     {
-        private bool _browserDownloaded = false;
+        private static readonly SemaphoreSlim _browserDownloadLock = new(1, 1);
+        private static bool _browserDownloaded = false;
 
         public async Task<byte[]> GeneratePdfAsync(string htmlContent)
         {
+            // Ensure browser is downloaded once across all instances
             if (!_browserDownloaded)
             {
-                var browserFetcher = new BrowserFetcher();
-                await browserFetcher.DownloadAsync();
-                _browserDownloaded = true;
+                await _browserDownloadLock.WaitAsync();
+                try
+                {
+                    if (!_browserDownloaded)
+                    {
+                        var browserFetcher = new BrowserFetcher();
+                        await browserFetcher.DownloadAsync();
+                        _browserDownloaded = true;
+                    }
+                }
+                finally
+                {
+                    _browserDownloadLock.Release();
+                }
             }
 
             using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
@@ -25,7 +38,7 @@ namespace DocumentGenerator.Infrastructure.Services
 
             using var page = await browser.NewPageAsync();
             await page.SetContentAsync(htmlContent);
-            
+
             return await page.PdfDataAsync(new PdfOptions
             {
                 Format = PaperFormat.A4,
