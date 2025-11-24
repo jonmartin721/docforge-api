@@ -2,26 +2,51 @@
 
 Stop fighting with PDF libraries. Write HTML templates, get PDFs back.
 
-*[Dashboard screenshot coming soon]*
+DocForge is a .NET 8 API + React frontend for generating PDFs from templates. You write HTML with Handlebars variables, POST your JSON data, get a PDF. That's it.
 
-Perfect for invoices, reports, certificates, or any document that changes based on data. Includes a REST API (.NET 8) and React frontend for managing templates and generating documents.
+Good for invoices, reports, certificates - anything where the layout stays the same but the data changes.
+
+## The Concept
+
+```html
+<!-- 1. Write a template -->
+<h1>Invoice #{{invoiceNumber}}</h1>
+<p>Total: ${{total}}</p>
+```
+
+```json
+// 2. Send JSON data
+{
+  "invoiceNumber": "12345",
+  "total": "250.00"
+}
+```
+
+**Result:** A formatted PDF invoice.
 
 ## Quick Start
 
-**With Docker** (easiest):
+(Requires Docker OR .NET 8 SDK + Node.js 18+)
+
+**With Docker** (runs API only):
 ```bash
-git clone https://github.com/yourusername/docforge-api.git
+git clone https://github.com/jonmartin721/docforge-api.git
 cd docforge-api
-docker-compose up
+docker-compose up -d
+
+# Then start the frontend separately
+cd DocumentGenerator.Client
+npm install
+npm run dev
 ```
 
 Then open:
 - **Frontend**: http://localhost:5173
-- **API**: http://localhost:5257/swagger
+- **API**: http://localhost:5000/swagger (Docker runs on port 5000)
 
-**Local development**:
+**Local development** (without Docker):
 ```bash
-# Backend
+# Backend (runs on port 5257)
 dotnet run --project DocumentGenerator.API
 
 # Frontend (separate terminal)
@@ -30,101 +55,36 @@ npm install
 npm run dev
 ```
 
+Then open:
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:5257/swagger (local dev runs on port 5257)
+
 ## Features
 
-- **React Frontend**: Dashboard, template editor, document library - no Swagger needed for daily use
-- **HTML templates**: Use Handlebars syntax you already know, no weird DSL to learn
-- **Bulk generation**: Process hundreds of documents from JSON arrays
-- **JWT auth**: Secure multi-user support with refresh tokens
-- **Docker ready**: One command to run everything locally
+- **Templates are just HTML + CSS** - Uses Handlebars (same as Mustache)
+- **Visual builder** - Drag-and-drop editor with invoice/contract/letter presets
+- **React frontend** - Dashboard, template editor, document library
+- **Multi-user** - JWT auth with refresh tokens
+- **Docker support** - API runs in container, frontend runs locally (Vite)
 
-## How It Works
+<!-- TODO: Add a screenshot of the dashboard here to show the visual builder -->
 
-1. **Create a template** using HTML + Handlebars variables
-2. **POST your data** to the generation endpoint
-3. **Get a PDF back** - that's it
 
-The frontend makes this even easier with a visual template editor and JSON input form.
-
-## Frontend UI
-
-*[Login screenshot coming soon - Dark-themed auth with gradient backgrounds]*
-
-*[Template management screenshot coming soon - Template management with preview]*
-
-*[Document generation screenshot coming soon - Document generation with JSON input]*
-
-### What You Get
-
-The React SPA includes:
-- Template editor with syntax highlighting
-- Document generation with live JSON validation
-- Download generated PDFs with one click
-- Dashboard showing recent activity
-- Dark theme with gradients because why not
-
-Built with Vite + React Router. Fast, clean, no bloat.
-
-See it in action:
-*[Demo video coming soon]*
-
-## Example: Generate an Invoice
-
-```bash
-# 1. Register a user
-curl -X POST http://localhost:5257/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "demo",
-    "email": "demo@example.com",
-    "password": "password123"
-  }'
-
-# Response includes your token
-# {
-#   "token": "eyJhbGc...",
-#   "refreshToken": "...",
-#   "expiration": "2025-11-20T00:00:00Z"
-# }
-
-# 2. Create a template
-curl -X POST http://localhost:5257/api/templates \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Invoice Template",
-    "content": "<h1>Invoice #{{invoiceNumber}}</h1><p>Customer: {{customer}}</p><p>Total: ${{total}}</p>",
-    "description": "Standard invoice"
-  }'
-
-# 3. Generate PDF
-curl -X POST http://localhost:5257/api/documents/generate \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "templateId": "YOUR_TEMPLATE_ID",
-    "data": {
-      "invoiceNumber": "12345",
-      "customer": "Acme Corp",
-      "total": "250.00"
-    }
-  }'
-
-# Returns document metadata with download link
-```
-
-Or just use the frontend - it's way easier.
 
 ## Template Syntax
 
 Templates use Handlebars. If you've used Mustache, it's basically that.
 
-**Variables**: 
+**Variables**:
 ```html
+<!-- Template -->
 <h1>Hello {{name}}</h1>
+
+<!-- With { "name": "Alice" } you get: -->
+<h1>Hello Alice</h1>
 ```
 
-**Loops**: 
+**Loops**:
 ```html
 <ul>
 {{#each items}}
@@ -133,7 +93,7 @@ Templates use Handlebars. If you've used Mustache, it's basically that.
 </ul>
 ```
 
-**Conditionals**: 
+**Conditionals**:
 ```html
 {{#if isPaid}}
   <span class="paid">✓ Paid</span>
@@ -142,7 +102,7 @@ Templates use Handlebars. If you've used Mustache, it's basically that.
 {{/if}}
 ```
 
-**Pro tip**: Test your templates in the frontend editor - it'll show you syntax errors before you try to generate.
+Test your templates in the frontend editor first - it catches syntax errors before you hit the API.
 
 ## Tech Stack
 
@@ -159,133 +119,15 @@ Templates use Handlebars. If you've used Mustache, it's basically that.
 - React 18 with Vite
 - React Router for navigation
 - Axios with interceptors for JWT
-- Vanilla CSS (no framework bloat)
+- Vanilla CSS
 - Google Fonts (Inter)
 
 ## API Reference
 
-### Authentication
+Full API documentation is available at `/swagger` when running the application.
 
-**Register**
-```http
-POST /api/auth/register
-Content-Type: application/json
 
-{
-  "username": "user1",
-  "email": "user1@example.com",
-  "password": "password123"
-}
-```
 
-**Login**
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "username": "user1",
-  "password": "password123"
-}
-```
-
-### Templates
-
-**Create Template** (requires auth)
-```http
-POST /api/templates
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "name": "Invoice Template",
-  "content": "<html>...{{variable}}...</html>",
-  "description": "Standard invoice"
-}
-```
-
-**List Templates**
-```http
-GET /api/templates
-Authorization: Bearer {token}
-```
-
-**Delete Template**
-```http
-DELETE /api/templates/{id}
-Authorization: Bearer {token}
-```
-
-### Documents
-
-**Generate Document** (requires auth)
-```http
-POST /api/documents/generate
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "templateId": "guid-here",
-  "data": {
-    "companyName": "Acme Corp",
-    "items": [...]
-  }
-}
-```
-
-**Download PDF**
-```http
-GET /api/documents/{id}/download
-Authorization: Bearer {token}
-```
-
-Full API docs available at `/swagger` when running locally.
-
-## Development Setup
-
-### Prerequisites
-- .NET 8 SDK
-- Node.js 18+ (for frontend)
-- Docker (optional but recommended)
-
-### Running Locally
-
-1. **Clone and restore**:
-   ```bash
-   git clone https://github.com/yourusername/docforge-api.git
-   cd docforge-api
-   dotnet restore
-   ```
-
-2. **Run migrations** (if needed):
-   ```bash
-   dotnet tool install --global dotnet-ef
-   dotnet ef database update --project DocumentGenerator.Infrastructure --startup-project DocumentGenerator.API
-   ```
-
-3. **Start backend**:
-   ```bash
-   dotnet run --project DocumentGenerator.API
-   # API running at http://localhost:5257
-   ```
-
-4. **Start frontend** (new terminal):
-   ```bash
-   cd DocumentGenerator.Client
-   npm install
-   npm run dev
-   # Frontend at http://localhost:5173
-   ```
-
-### Docker Setup
-
-```bash
-docker-compose up --build
-```
-
-Access:
-- Frontend: http://localhost:5173
-- API: http://localhost:5000/swagger
 
 ## Testing
 
@@ -304,13 +146,13 @@ Includes unit tests and integration tests with in-memory database.
 - FluentValidation prevents injection attacks
 - CORS properly configured for local dev
 
-## What's Next
+## Roadmap
 
-- [ ] Template versioning
-- [ ] CSS support in templates (currently HTML only)
-- [ ] Batch job processing
-- [ ] S3/Azure Blob storage option
-- [ ] Template marketplace?
+Things I might add:
+- Template versioning (save history)
+- Bulk generation (process 100s of PDFs from a CSV)
+- Cloud storage (S3/Azure instead of local disk)
+- Template sharing (if there's interest)
 
 ## Contributing
 
@@ -326,6 +168,8 @@ Found a bug? Want to add a feature? PRs welcome.
 
 MIT - do whatever you want with it.
 
+
+
 ---
 
-Built with ☕ because generating PDFs shouldn't be this hard.
+Made by [@jonmartin721](https://github.com/jonmartin721). PRs welcome.
