@@ -165,6 +165,30 @@ do_test() {
     wait_for_enter
 }
 
+do_clear_data() {
+    echo -e "${RED}${BOLD}⚠ WARNING: This will delete all data (Database & Generated Files)!${NC}"
+    read -p "Are you sure? (y/N): " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Cancelled."
+        wait_for_enter
+        return
+    fi
+
+    do_stop_all
+    
+    echo "Deleting database..."
+    rm -f "$API_DIR/documentgenerator.db"
+    
+    echo "Deleting generated documents..."
+    # Ensure directory exists before trying to empty it to avoid errors
+    if [ -d "$API_DIR/GeneratedDocuments" ]; then
+        rm -rf "$API_DIR/GeneratedDocuments"/*
+    fi
+    
+    echo -e "${GREEN}Data cleared!${NC}"
+    wait_for_enter
+}
+
 # Main Loop
 while true; do
     print_header
@@ -181,6 +205,8 @@ while true; do
     echo "  8) 🌍 Open App in Browser"
     echo "  9) 🧪 Run Tests"
     echo ""
+    echo "  r) 🔄 Refresh Status"
+    echo "  c) 🗑️ Clear All Data"
     echo "  q) Quit"
     echo ""
     read -p "Select an option: " option
@@ -195,6 +221,8 @@ while true; do
         7) do_view_logs "client.log" "Frontend" ;;
         8) do_open_browser ;;
         9) do_test ;;
+        r) ;; # Just loop to refresh
+        c) do_clear_data ;;
         q) exit 0 ;;
         *) echo -e "${RED}Invalid option${NC}"; sleep 1 ;;
     esac
