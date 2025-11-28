@@ -9,5 +9,6 @@ namespace DocumentGenerator.Core.Interfaces
         Task<IEnumerable<DocumentDto>> GetAllAsync(Guid userId);
         Task<(byte[] FileData, string FileName)?> GetDocumentFileAsync(Guid id, Guid userId);
         Task<bool> DeleteAsync(Guid id, Guid userId);
+        Task DeleteByTemplateIdAsync(Guid templateId);
     }
 }

@@ -4,6 +4,7 @@ using DocumentGenerator.Core.Entities;
 using DocumentGenerator.Core.Mappings;
 using DocumentGenerator.Infrastructure.Data;
 using DocumentGenerator.Infrastructure.Services;
+using DocumentGenerator.Core.Interfaces;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -16,6 +17,7 @@ namespace DocumentGenerator.Tests.Unit
         private readonly TemplateService _templateService;
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly Mock<IDocumentService> _mockDocumentService;
 
         public TemplateServiceTests()
         {
@@ -27,7 +29,8 @@ namespace DocumentGenerator.Tests.Unit
             var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
             _mapper = config.CreateMapper();
 
-            _templateService = new TemplateService(_context, _mapper);
+            _mockDocumentService = new Mock<IDocumentService>();
+            _templateService = new TemplateService(_context, _mapper, _mockDocumentService.Object);
         }
 
         [Fact]

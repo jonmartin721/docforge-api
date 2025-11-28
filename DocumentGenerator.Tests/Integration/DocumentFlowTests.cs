@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http.Json;
 using Xunit;
+using Moq;
+using DocumentGenerator.Core.Interfaces;
 
 namespace DocumentGenerator.Tests.Integration
 {
@@ -32,6 +34,14 @@ namespace DocumentGenerator.Tests.Integration
                     {
                         options.UseInMemoryDatabase("InMemoryDbForTesting");
                     });
+
+                    var pdfServiceDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPdfService));
+                    if (pdfServiceDescriptor != null) services.Remove(pdfServiceDescriptor);
+
+                    var mockPdfService = new Mock<IPdfService>();
+                    mockPdfService.Setup(x => x.GeneratePdfAsync(It.IsAny<string>()))
+                        .ReturnsAsync(new byte[] { 0x01, 0x02, 0x03 });
+                    services.AddSingleton(mockPdfService.Object);
                 });
             });
 

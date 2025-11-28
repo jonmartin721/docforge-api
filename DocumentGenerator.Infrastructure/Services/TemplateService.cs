@@ -12,11 +12,13 @@ namespace DocumentGenerator.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IDocumentService _documentService;
 
-        public TemplateService(ApplicationDbContext context, IMapper mapper)
+        public TemplateService(ApplicationDbContext context, IMapper mapper, IDocumentService documentService)
         {
             _context = context;
             _mapper = mapper;
+            _documentService = documentService;
         }
 
         public async Task<IEnumerable<TemplateDto>> GetAllAsync()
@@ -85,6 +87,8 @@ namespace DocumentGenerator.Infrastructure.Services
         {
             var template = await _context.Templates.FindAsync(id);
             if (template == null) return false;
+
+            await _documentService.DeleteByTemplateIdAsync(id);
 
             _context.Templates.Remove(template);
             await _context.SaveChangesAsync();

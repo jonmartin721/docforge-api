@@ -125,5 +125,30 @@ namespace DocumentGenerator.Infrastructure.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task DeleteByTemplateIdAsync(Guid templateId)
+        {
+            var documents = await _context.Documents
+                .Where(d => d.TemplateId == templateId)
+                .ToListAsync();
+
+            foreach (var doc in documents)
+            {
+                if (File.Exists(doc.StoragePath))
+                {
+                    try
+                    {
+                        File.Delete(doc.StoragePath);
+                    }
+                    catch (Exception)
+                    {
+                        // Log error or ignore if file deletion fails
+                    }
+                }
+                _context.Documents.Remove(doc);
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }
