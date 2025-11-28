@@ -1,14 +1,15 @@
 #!/bin/bash
 
-# docforge.sh - TUI for DocForge API
+# docforge.sh - CLI for DocForge API
 # Usage: ./docforge.sh
 
-# Colors
+# Colors and Formatting
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Configuration
@@ -20,22 +21,16 @@ CLIENT_DIR="./DocumentGenerator.Client"
 # Helper Functions
 check_port() {
     if lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null ; then
-        echo -e "${GREEN}UP${NC}"
+        echo -e "${GREEN}🟢 UP${NC}"
     else
-        echo -e "${RED}DOWN${NC}"
+        echo -e "${RED}🔴 DOWN${NC}"
     fi
 }
 
 print_header() {
     clear
-    echo -e "${CYAN}"
-    echo "  ____             ______                      "
-    echo " |  _ \  ___   ___|  ____|___  _ __ __ _  ___  "
-    echo " | | | |/ _ \ / __| |__  / _ \| '__/ _\` |/ _ \ "
-    echo " | |_| | (_) | (__|  __|| (_) | | | (_| |  __/ "
-    echo " |____/ \___/ \___|_|    \___/|_|  \__, |\___| "
-    echo "                                    __/ |      "
-    echo "                                   |___/       "
+    echo -e "${CYAN}${BOLD}"
+    echo "   DOCFORGE"
     echo -e "${NC}"
     echo "==============================================="
     echo -e " Backend (API):    $(check_port $API_PORT) (Port $API_PORT)"
@@ -124,6 +119,46 @@ do_stop_all() {
     sleep 1
 }
 
+do_view_logs() {
+    LOG_FILE=$1
+    NAME=$2
+    
+    if [ ! -f "$LOG_FILE" ]; then
+        echo -e "${RED}Log file $LOG_FILE not found.${NC}"
+        wait_for_enter
+        return
+    fi
+
+    echo -e "${YELLOW}Viewing $NAME logs (Press Ctrl+C to exit)...${NC}"
+    sleep 1
+    tail -f "$LOG_FILE"
+}
+
+do_open_browser() {
+    if ! lsof -Pi :$CLIENT_PORT -sTCP:LISTEN -t >/dev/null ; then
+        echo -e "${RED}Frontend is not running! Please start it first.${NC}"
+        wait_for_enter
+        return
+    fi
+
+    URL="http://localhost:$CLIENT_PORT"
+    echo -e "${GREEN}Opening $URL...${NC}"
+    
+    if grep -q Microsoft /proc/version; then
+        # WSL
+        explorer.exe "$URL"
+    elif command -v xdg-open >/dev/null; then
+        # Linux
+        xdg-open "$URL"
+    elif command -v open >/dev/null; then
+        # macOS
+        open "$URL"
+    else
+        echo -e "${RED}Could not detect browser opener. Please open $URL manually.${NC}"
+    fi
+    wait_for_enter
+}
+
 do_test() {
     echo -e "${YELLOW}Running Tests...${NC}"
     dotnet test
@@ -133,13 +168,20 @@ do_test() {
 # Main Loop
 while true; do
     print_header
-    echo "1) 🔧 Setup (Install Dependencies)"
-    echo "2) 🚀 Start Backend"
-    echo "3) 🌐 Start Frontend"
-    echo "4) ⚡ Start Both"
-    echo "5) 🛑 Stop All"
-    echo "6) 🧪 Run Tests"
-    echo "q) Quit"
+    echo -e "${BOLD}Core Actions:${NC}"
+    echo "  1) 🔧 Setup Dependencies"
+    echo "  2) 🚀 Start Backend"
+    echo "  3) 🌐 Start Frontend"
+    echo "  4) ⚡ Start Both"
+    echo "  5) 🛑 Stop All Services"
+    echo ""
+    echo -e "${BOLD}Tools:${NC}"
+    echo "  6) 📄 View Backend Logs"
+    echo "  7) 📑 View Frontend Logs"
+    echo "  8) 🌍 Open App in Browser"
+    echo "  9) 🧪 Run Tests"
+    echo ""
+    echo "  q) Quit"
     echo ""
     read -p "Select an option: " option
 
@@ -149,7 +191,10 @@ while true; do
         3) do_start_frontend ;;
         4) do_start_backend; do_start_frontend ;;
         5) do_stop_all ;;
-        6) do_test ;;
+        6) do_view_logs "api.log" "Backend" ;;
+        7) do_view_logs "client.log" "Frontend" ;;
+        8) do_open_browser ;;
+        9) do_test ;;
         q) exit 0 ;;
         *) echo -e "${RED}Invalid option${NC}"; sleep 1 ;;
     esac

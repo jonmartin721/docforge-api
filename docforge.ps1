@@ -1,4 +1,4 @@
-# docforge.ps1 - TUI for DocForge API
+# docforge.ps1 - CLI for DocForge API
 # Usage: .\docforge.ps1
 
 $API_PORT = 5257
@@ -10,21 +10,15 @@ function Check-Port {
     param([int]$port)
     $tcp = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
     if ($tcp -and $tcp.State -eq 'Listen') {
-        Write-Host "UP" -ForegroundColor Green -NoNewline
+        Write-Host "🟢 UP" -ForegroundColor Green -NoNewline
     } else {
-        Write-Host "DOWN" -ForegroundColor Red -NoNewline
+        Write-Host "🔴 DOWN" -ForegroundColor Red -NoNewline
     }
 }
 
 function Print-Header {
     Clear-Host
-    Write-Host "  ____             ______                      " -ForegroundColor Cyan
-    Write-Host " |  _ \  ___   ___|  ____|___  _ __ __ _  ___  " -ForegroundColor Cyan
-    Write-Host " | | | |/ _ \ / __| |__  / _ \| '__/ _\` |/ _ \ " -ForegroundColor Cyan
-    Write-Host " | |_| | (_) | (__|  __|| (_) | | | (_| |  __/ " -ForegroundColor Cyan
-    Write-Host " |____/ \___/ \___|_|    \___/|_|  \__, |\___| " -ForegroundColor Cyan
-    Write-Host "                                    __/ |      " -ForegroundColor Cyan
-    Write-Host "                                   |___/       " -ForegroundColor Cyan
+    Write-Host "   DOCFORGE" -ForegroundColor Cyan
     Write-Host "==============================================="
     Write-Host " Backend (API):    " -NoNewline
     Check-Port $API_PORT
@@ -50,8 +44,6 @@ function Do-Setup {
     }
     Wait-For-Enter
 }
-
-
 
 function Do-Start-Backend-NewWindow {
     Write-Host "Starting Backend in new window..." -ForegroundColor Yellow
@@ -119,6 +111,34 @@ function Do-Stop-All {
     Wait-For-Enter
 }
 
+function Do-View-Logs {
+    param([string]$LogFile, [string]$Name)
+    
+    if (-not (Test-Path $LogFile)) {
+        Write-Host "Log file $LogFile not found." -ForegroundColor Red
+        Wait-For-Enter
+        return
+    }
+
+    Write-Host "Viewing $Name logs (Press Ctrl+C to exit)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 1
+    Get-Content -Path $LogFile -Wait
+}
+
+function Do-Open-Browser {
+    $tcp = Get-NetTCPConnection -LocalPort $CLIENT_PORT -ErrorAction SilentlyContinue
+    if (-not ($tcp -and $tcp.State -eq 'Listen')) {
+        Write-Host "Frontend is not running! Please start it first." -ForegroundColor Red
+        Wait-For-Enter
+        return
+    }
+
+    $url = "http://localhost:$CLIENT_PORT"
+    Write-Host "Opening $url..." -ForegroundColor Green
+    Start-Process $url
+    Wait-For-Enter
+}
+
 function Do-Test {
     Write-Host "Running Tests..." -ForegroundColor Yellow
     dotnet test
@@ -128,13 +148,20 @@ function Do-Test {
 # Main Loop
 while ($true) {
     Print-Header
-    Write-Host "1) 🔧 Setup (Install Dependencies)"
-    Write-Host "2) 🚀 Start Backend (New Window)"
-    Write-Host "3) 🌐 Start Frontend (New Window)"
-    Write-Host "4) ⚡ Start Both"
-    Write-Host "5) 🛑 Stop All (Manual)"
-    Write-Host "6) 🧪 Run Tests"
-    Write-Host "q) Quit"
+    Write-Host "Core Actions:" -ForegroundColor White
+    Write-Host "  1) 🔧 Setup Dependencies"
+    Write-Host "  2) 🚀 Start Backend"
+    Write-Host "  3) 🌐 Start Frontend"
+    Write-Host "  4) ⚡ Start Both"
+    Write-Host "  5) 🛑 Stop All Services"
+    Write-Host ""
+    Write-Host "Tools:" -ForegroundColor White
+    Write-Host "  6) 📄 View Backend Logs"
+    Write-Host "  7) 📑 View Frontend Logs"
+    Write-Host "  8) 🌍 Open App in Browser"
+    Write-Host "  9) 🧪 Run Tests"
+    Write-Host ""
+    Write-Host "  q) Quit"
     Write-Host ""
     $option = Read-Host "Select an option"
 
@@ -144,7 +171,10 @@ while ($true) {
         "3" { Do-Start-Frontend-NewWindow }
         "4" { Do-Start-Backend-NewWindow; Do-Start-Frontend-NewWindow }
         "5" { Do-Stop-All }
-        "6" { Do-Test }
+        "6" { Do-View-Logs "api.log" "Backend" }
+        "7" { Do-View-Logs "client.log" "Frontend" }
+        "8" { Do-Open-Browser }
+        "9" { Do-Test }
         "q" { exit }
         Default { Write-Host "Invalid option"; Start-Sleep -Seconds 1 }
     }
