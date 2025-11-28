@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { authService } from './services/authService';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -8,13 +9,24 @@ import GeneratePage from './pages/GeneratePage';
 import DocumentsPage from './pages/DocumentsPage';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
+
+  useEffect(() => {
+    const handleLogout = () => {
+      setIsAuthenticated(false);
+    };
+
+    window.addEventListener('logout', handleLogout);
+    return () => window.removeEventListener('logout', handleLogout);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
         <Route
           path="/login"
           element={
-            authService.isAuthenticated() ? (
+            isAuthenticated ? (
               <Navigate to="/" replace />
             ) : (
               <AuthPage />

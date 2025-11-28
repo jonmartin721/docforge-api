@@ -22,6 +22,7 @@ export const authService = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('logout'));
   },
 
   getCurrentUser() {
