@@ -41,6 +41,18 @@ export default function DocumentsPage() {
     }
   };
 
+  const handleView = async (id) => {
+    try {
+      const blob = await documentService.download(id);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Note: We can't revoke the URL immediately if we want it to persist in the new tab
+      // The browser will clean it up when the document is unloaded
+    } catch (err) {
+      setError('Failed to view document');
+    }
+  };
+
   const confirmDelete = (id) => {
     setDeleteModal({ isOpen: true, docId: id });
   };
@@ -53,6 +65,16 @@ export default function DocumentsPage() {
     } catch (err) {
       setError('Failed to delete document');
       setDeleteModal({ isOpen: false, docId: null });
+    }
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString();
+    } catch {
+      return 'Invalid Date';
     }
   };
 
@@ -93,13 +115,19 @@ export default function DocumentsPage() {
                   <h3 className="mb-sm">{doc.fileName}</h3>
                   <div className="document-meta">
                     <span className="text-muted">
-                      Generated {new Date(doc.createdAt).toLocaleDateString()}
+                      Generated {formatDate(doc.createdAt)}
                     </span>
                     <span className="text-muted">•</span>
                     <span className="text-muted">{doc.templateName}</span>
                   </div>
                 </div>
                 <div className="document-actions flex gap-sm">
+                  <button
+                    onClick={() => handleView(doc.id)}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    View
+                  </button>
                   <button
                     onClick={() => handleDownload(doc.id, doc.fileName)}
                     className="btn btn-primary btn-sm"

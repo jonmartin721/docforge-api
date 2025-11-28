@@ -17,6 +17,8 @@
   overflow-y: auto;
   margin: 0;
   font-family: 'Monaco', 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 @media (max-width: 968px) {
