@@ -6,6 +6,15 @@ DocForge is a .NET 8 API + React frontend for generating PDFs from templates. Yo
 
 Good for invoices, reports, certificates - anything where the layout stays the same but the data changes.
 
+## When to use DocForge
+
+✅ You need PDFs with consistent layouts (invoices, certificates, reports)
+✅ You want to write templates in HTML instead of fighting PDF libraries
+✅ You need a visual editor for non-developers
+
+❌ You need pixel-perfect print layouts (use LaTeX)
+❌ You're generating simple text-only PDFs (use a simpler library)
+
 ## The Concept
 
 ```html
@@ -24,7 +33,28 @@ Good for invoices, reports, certificates - anything where the layout stays the s
 
 **Result:** A formatted PDF invoice.
 
-## Quick Start
+## What it looks like
+
+(Need to grab a screenshot of the visual editor here - drag/drop in action)
+
+## Super Quick Start (TUI)
+
+We have a text-based user interface to help you manage everything.
+
+```bash
+# Linux / macOS / WSL
+# First time only: make scripts executable
+chmod +x docforge.sh scripts/setup-linux.sh
+
+# Run the TUI
+./docforge.sh
+
+# Windows (PowerShell)
+.\docforge.ps1
+```
+This will open a menu where you can install dependencies, start the backend/frontend, and run tests.
+
+## Quick Start (Manual)
 
 (Requires Docker OR .NET 8 SDK + Node.js 18+)
 
@@ -44,6 +74,14 @@ Then open:
 - **Frontend**: http://localhost:5173
 - **API**: http://localhost:5000/swagger (Docker runs on port 5000)
 
+### Linux / WSL Setup
+If running locally on Linux or WSL, you need to install dependencies for the PDF generator (Chrome/Puppeteer).
+
+Run the setup script:
+```bash
+sudo ./scripts/setup-linux.sh
+```
+
 **Local development** (without Docker):
 ```bash
 # Backend (runs on port 5257)
@@ -61,13 +99,12 @@ Then open:
 
 ## Features
 
-- **Templates are just HTML + CSS** - Uses Handlebars (same as Mustache)
-- **Visual builder** - Drag-and-drop editor with invoice/contract/letter presets
-- **React frontend** - Dashboard, template editor, document library
-- **Multi-user** - JWT auth with refresh tokens
+- **No PDF library wrestling** - Just write HTML/CSS like you already know
+- **Visual editor included** - Build templates with drag-and-drop, see changes instantly
+- **Works offline** - No external API calls, runs entirely on your infrastructure
+- **Handles the hard parts** - Chrome rendering, proper fonts, page breaks that don't suck
+- **Multi-user ready** - JWT auth built in, not bolted on later
 - **Docker support** - API runs in container, frontend runs locally (Vite)
-
-<!-- TODO: Add a screenshot of the dashboard here to show the visual builder -->
 
 
 
@@ -77,11 +114,23 @@ Templates use Handlebars. If you've used Mustache, it's basically that.
 
 **Variables**:
 ```html
-<!-- Template -->
-<h1>Hello {{name}}</h1>
+<!-- Your template -->
+<h1>Invoice #{{invoiceNumber}}</h1>
+<p>Customer: {{customerName}}</p>
+```
 
-<!-- With { "name": "Alice" } you get: -->
-<h1>Hello Alice</h1>
+```json
+// Your data
+{
+  "invoiceNumber": "INV-2024-001",
+  "customerName": "Acme Corp"
+}
+```
+
+```html
+<!-- Result in PDF -->
+<h1>Invoice #INV-2024-001</h1>
+<p>Customer: Acme Corp</p>
 ```
 
 **Loops**:
@@ -122,12 +171,11 @@ Test your templates in the frontend editor first - it catches syntax errors befo
 - Vanilla CSS
 - Google Fonts (Inter)
 
-## API Reference
+## Learn More
 
-Full API documentation is available at `/swagger` when running the application.
-
-
-
+- 📖 **API Documentation** - Available at `/swagger` when running the application
+- 🎨 **Template Examples** - Check `DocumentGenerator.Client` for sample templates
+- 🏗️ **Architecture** - .NET 8 API + React frontend, uses PuppeteerSharp for PDF rendering
 
 ## Testing
 
@@ -156,8 +204,14 @@ Things I might add:
 
 ## Contributing
 
-Found a bug? Want to add a feature? PRs welcome.
+This is a portfolio project, but I'm happy to review PRs!
 
+**Quick contribution ideas:**
+- Add template examples (invoices, tickets, certificates)
+- Improve error messages
+- Add tests for edge cases
+
+**Standard workflow:**
 1. Fork it
 2. Create your feature branch (`git checkout -b feature/cool-thing`)
 3. Commit your changes (`git commit -am 'Add cool thing'`)
@@ -167,7 +221,6 @@ Found a bug? Want to add a feature? PRs welcome.
 ## License
 
 MIT - do whatever you want with it.
-
 
 
 ---
