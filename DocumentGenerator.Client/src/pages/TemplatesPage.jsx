@@ -54,11 +54,27 @@ export default function TemplatesPage() {
   const handleDelete = async () => {
     try {
       await templateService.delete(deleteModal.templateId);
+
+      // Update local state immediately
+      setTemplates(templates.filter(t => t.id !== deleteModal.templateId));
       setDeleteModal({ isOpen: false, templateId: null });
-      await loadTemplates();
+
+      // Reload to ensure consistency (optional, but good practice)
+      // await loadTemplates(); 
     } catch (err) {
-      setError('Failed to delete template');
+      console.error('Delete error:', err);
+      setError(err.response?.data?.message || 'Failed to delete template');
       setDeleteModal({ isOpen: false, templateId: null });
+    }
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString();
+    } catch {
+      return 'Invalid Date';
     }
   };
 
@@ -170,7 +186,7 @@ export default function TemplatesPage() {
                 <div className="template-header">
                   <h3 className="mb-sm">{template.name}</h3>
                   <span className="template-date text-muted">
-                    {new Date(template.createdAt).toLocaleDateString()}
+                    {formatDate(template.createdAt)}
                   </span>
                 </div>
                 <div className="template-preview-wrapper">
@@ -178,7 +194,7 @@ export default function TemplatesPage() {
                     <div
                       className="template-preview-content"
                       dangerouslySetInnerHTML={{
-                        __html: template.content
+                        __html: (template.content || '')
                           .replace(/{{(.*?)}}/g, '<span class="var-placeholder">$1</span>')
                       }}
                     />

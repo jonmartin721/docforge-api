@@ -23,11 +23,11 @@ export default function GeneratePage() {
     try {
       const data = await templateService.getById(templateId);
       setTemplate(data);
-      
+
       // Extract variables from template
       const variables = [...data.content.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
       const uniqueVars = [...new Set(variables)];
-      
+
       if (uniqueVars.length > 0) {
         const sampleData = {};
         uniqueVars.forEach(v => {
@@ -51,7 +51,7 @@ export default function GeneratePage() {
       const parsedData = JSON.parse(jsonData);
       const doc = await documentService.generate(templateId, parsedData);
       setSuccess(true);
-      
+
       setTimeout(() => {
         navigate(`/documents`);
       }, 1500);

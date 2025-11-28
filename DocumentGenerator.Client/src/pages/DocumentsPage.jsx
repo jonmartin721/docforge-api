@@ -115,7 +115,7 @@ export default function DocumentsPage() {
                   <h3 className="mb-sm">{doc.fileName}</h3>
                   <div className="document-meta">
                     <span className="text-muted">
-                      Generated {formatDate(doc.createdAt)}
+                      Generated {formatDate(doc.generatedAt)}
                     </span>
                     <span className="text-muted">•</span>
                     <span className="text-muted">{doc.templateName}</span>

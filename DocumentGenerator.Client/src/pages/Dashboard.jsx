@@ -23,7 +23,7 @@ export default function Dashboard() {
         templateService.getAll(),
         documentService.getAll(),
       ]);
-      
+
       setStats({
         templates: templates.length,
         documents: documents.length,
@@ -94,7 +94,7 @@ export default function Dashboard() {
                   <div className="recent-info">
                     <div className="recent-name">{doc.fileName}</div>
                     <div className="text-muted">
-                      {new Date(doc.createdAt).toLocaleDateString()}
+                      {new Date(doc.generatedAt).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
