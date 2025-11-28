@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { documentService } from '../services/documentService';
 import Navbar from '../components/Navbar';
+import Modal from '../components/Modal';
 import './DocumentsPage.css';
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, docId: null });
 
   useEffect(() => {
     loadDocuments();
@@ -39,13 +41,18 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+  const confirmDelete = (id) => {
+    setDeleteModal({ isOpen: true, docId: id });
+  };
+
+  const handleDelete = async () => {
     try {
-      await documentService.delete(id);
+      await documentService.delete(deleteModal.docId);
+      setDeleteModal({ isOpen: false, docId: null });
       await loadDocuments();
     } catch (err) {
       setError('Failed to delete document');
+      setDeleteModal({ isOpen: false, docId: null });
     }
   };
 
@@ -100,7 +107,7 @@ export default function DocumentsPage() {
                     Download
                   </button>
                   <button
-                    onClick={() => handleDelete(doc.id)}
+                    onClick={() => confirmDelete(doc.id)}
                     className="btn btn-danger btn-sm"
                   >
                     Delete
@@ -111,6 +118,31 @@ export default function DocumentsPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, docId: null })}
+        title="Delete Document"
+        type="danger"
+        footer={
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setDeleteModal({ isOpen: false, docId: null })}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={handleDelete}
+            >
+              Delete
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to delete this document? This action cannot be undone.</p>
+      </Modal>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { templateService } from '../services/templateService';
 import Navbar from '../components/Navbar';
 import TemplateEditor from '../components/TemplateEditor';
 import VisualBuilder from '../components/VisualBuilder';
+import Modal from '../components/Modal';
 import './TemplatesPage.css';
 
 export default function TemplatesPage() {
@@ -14,6 +15,7 @@ export default function TemplatesPage() {
   const [formData, setFormData] = useState({ name: '', content: '' });
   const [submitting, setSubmitting] = useState(false);
   const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'code'
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, templateId: null });
 
   useEffect(() => {
     loadTemplates();
@@ -45,13 +47,18 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this template?')) return;
+  const confirmDelete = (id) => {
+    setDeleteModal({ isOpen: true, templateId: id });
+  };
+
+  const handleDelete = async () => {
     try {
-      await templateService.delete(id);
+      await templateService.delete(deleteModal.templateId);
+      setDeleteModal({ isOpen: false, templateId: null });
       await loadTemplates();
     } catch (err) {
       setError('Failed to delete template');
+      setDeleteModal({ isOpen: false, templateId: null });
     }
   };
 
@@ -104,43 +111,43 @@ export default function TemplatesPage() {
                   placeholder="Invoice Template"
                 />
               </div>
-                <div className="form-group">
-                  <div className="flex-between mb-sm">
-                    <label className="mb-0">Template Content</label>
-                    <div className="btn-group">
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${editorMode === 'visual' ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => setEditorMode('visual')}
-                      >
-                        Visual Builder
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${editorMode === 'code' ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => setEditorMode('code')}
-                      >
-                        Code Editor
-                      </button>
-                    </div>
+              <div className="form-group">
+                <div className="flex-between mb-sm">
+                  <label className="mb-0">Template Content</label>
+                  <div className="btn-group">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${editorMode === 'visual' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setEditorMode('visual')}
+                    >
+                      Visual Builder
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${editorMode === 'code' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setEditorMode('code')}
+                    >
+                      Code Editor
+                    </button>
                   </div>
-                  
-                  {editorMode === 'visual' ? (
-                    <VisualBuilder
-                      initialContent={formData.content}
-                      onChange={(newContent) =>
-                        setFormData({ ...formData, content: newContent })
-                      }
-                    />
-                  ) : (
-                    <TemplateEditor
-                      initialContent={formData.content}
-                      onChange={(newContent) =>
-                        setFormData({ ...formData, content: newContent })
-                      }
-                    />
-                  )}
                 </div>
+
+                {editorMode === 'visual' ? (
+                  <VisualBuilder
+                    initialContent={formData.content}
+                    onChange={(newContent) =>
+                      setFormData({ ...formData, content: newContent })
+                    }
+                  />
+                ) : (
+                  <TemplateEditor
+                    initialContent={formData.content}
+                    onChange={(newContent) =>
+                      setFormData({ ...formData, content: newContent })
+                    }
+                  />
+                )}
+              </div>
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -168,11 +175,11 @@ export default function TemplatesPage() {
                 </div>
                 <div className="template-preview-wrapper">
                   <div className="template-preview-scale">
-                    <div 
+                    <div
                       className="template-preview-content"
-                      dangerouslySetInnerHTML={{ 
+                      dangerouslySetInnerHTML={{
                         __html: template.content
-                          .replace(/{{(.*?)}}/g, '<span class="var-placeholder">$1</span>') 
+                          .replace(/{{(.*?)}}/g, '<span class="var-placeholder">$1</span>')
                       }}
                     />
                   </div>
@@ -185,7 +192,7 @@ export default function TemplatesPage() {
                     Generate Doc
                   </Link>
                   <button
-                    onClick={() => handleDelete(template.id)}
+                    onClick={() => confirmDelete(template.id)}
                     className="btn btn-danger btn-sm"
                   >
                     Delete
@@ -196,6 +203,31 @@ export default function TemplatesPage() {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, templateId: null })}
+        title="Delete Template"
+        type="danger"
+        footer={
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setDeleteModal({ isOpen: false, templateId: null })}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={handleDelete}
+            >
+              Delete
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to delete this template? This action cannot be undone.</p>
+      </Modal>
     </div>
   );
 }

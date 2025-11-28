@@ -35,6 +35,7 @@ import {
   MousePointer2
 } from 'lucide-react';
 import './VisualBuilder.css';
+import Modal from './Modal';
 
 // --- Block Components ---
 
@@ -136,6 +137,7 @@ export default function VisualBuilder({ initialContent, onChange }) {
   const [blocks, setBlocks] = useState([]);
   const [selectedBlockId, setSelectedBlockId] = useState(null);
   const [layoutMode, setLayoutMode] = useState('document'); // 'document' | 'canvas'
+  const [clearModalOpen, setClearModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -161,7 +163,7 @@ export default function VisualBuilder({ initialContent, onChange }) {
     }
     // Default start if no blocks found
     if (!initialContent) {
-        loadPreset('invoice');
+      loadPreset('invoice');
     }
   }, []);
 
@@ -198,7 +200,7 @@ export default function VisualBuilder({ initialContent, onChange }) {
       const type = active.data.current.type;
       const newBlock = createBlock(type);
 
-        if (layoutMode === 'canvas') {
+      if (layoutMode === 'canvas') {
         // For this iteration, let's place it at a default visible spot
         // A more advanced implementation would calculate drop coordinates relative to the canvas.
         newBlock.x = 50;
@@ -267,6 +269,16 @@ export default function VisualBuilder({ initialContent, onChange }) {
     if (selectedBlockId === id) setSelectedBlockId(null);
   };
 
+  const handleClear = () => {
+    setClearModalOpen(true);
+  };
+
+  const confirmClear = () => {
+    setBlocks([]);
+    setSelectedBlockId(null);
+    setClearModalOpen(false);
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -294,8 +306,8 @@ export default function VisualBuilder({ initialContent, onChange }) {
           <div className="vb-toolbar">
             <div className="flex-between">
               <div className="text-sm text-muted">
-                {layoutMode === 'document' 
-                  ? 'Items stack automatically (like a document)' 
+                {layoutMode === 'document'
+                  ? 'Items stack automatically (like a document)'
                   : 'Place items anywhere (like a canvas)'}
               </div>
               <div className="btn-group">
@@ -318,49 +330,78 @@ export default function VisualBuilder({ initialContent, onChange }) {
               </div>
             </div>
           </div>
+          <div className="vb-tools-group ml-auto">
+            <button type="button" className="btn-danger" onClick={handleClear}>Clear All</button>
+          </div>
+        </div>
 
-          <div className="vb-canvas-wrapper">
-            <div className={`vb-canvas ${layoutMode === 'canvas' ? 'vb-canvas-fixed' : ''}`}>
-              <SortableContext
-                items={blocks.map(b => b.id)}
-                strategy={layoutMode === 'canvas' ? rectSortingStrategy : verticalListSortingStrategy}
+        <div className="vb-canvas-wrapper">
+          <div className={`vb-canvas ${layoutMode === 'canvas' ? 'vb-canvas-fixed' : ''}`}>
+            <SortableContext
+              items={blocks.map(b => b.id)}
+              strategy={layoutMode === 'canvas' ? rectSortingStrategy : verticalListSortingStrategy}
+            >
+              <div
+                id="canvas"
+                className="vb-drop-area"
+                style={layoutMode === 'canvas' ? { position: 'relative', height: '100%', minHeight: '297mm' } : {}}
               >
-                <div
-                  id="canvas"
-                  className="vb-drop-area"
-                  style={layoutMode === 'canvas' ? { position: 'relative', height: '100%', minHeight: '297mm' } : {}}
-                >
-                  {blocks.length === 0 && (
-                    <div className="vb-placeholder">
-                      Drop items here
-                    </div>
-                  )}
-                  {blocks.map((block) => (
-                    <BlockWrapper
-                      key={block.id}
-                      block={block}
-                      isSelected={selectedBlockId === block.id}
-                      onClick={() => setSelectedBlockId(block.id)}
-                      onDelete={() => deleteBlock(block.id)}
-                      onChange={(updates) => updateBlock(block.id, updates)}
-                      layoutMode={layoutMode}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </div>
-            <DragOverlay>
-              {/* Optional: Custom drag preview */}
-              {/* {activeDragId ? (
+                {blocks.length === 0 && (
+                  <div className="vb-placeholder">
+                    Drop items here
+                  </div>
+                )}
+                {blocks.map((block) => (
+                  <BlockWrapper
+                    key={block.id}
+                    block={block}
+                    isSelected={selectedBlockId === block.id}
+                    onClick={() => setSelectedBlockId(block.id)}
+                    onDelete={() => deleteBlock(block.id)}
+                    onChange={(updates) => updateBlock(block.id, updates)}
+                    layoutMode={layoutMode}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+          <DragOverlay>
+            {/* Optional: Custom drag preview */}
+            {/* {activeDragId ? (
                 <div className="vb-tool-overlay">
                   Dragging...
                 </div>
               ) : null} */}
-            </DragOverlay>
-          </div>
+          </DragOverlay>
         </div>
       </div>
-    </DndContext>
+      </div>
+
+      <Modal
+        isOpen={clearModalOpen}
+        onClose={() => setClearModalOpen(false)}
+        title="Clear All Content"
+        type="danger"
+        footer={
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setClearModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={confirmClear}
+            >
+              Clear All
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to clear all content? This action cannot be undone.</p>
+      </Modal>
+    </DndContext >
   );
 }
 
@@ -417,20 +458,20 @@ function BlockContent({ block, onChange }) {
       return (
         <div className="vb-block-image">
           <div className="flex gap-sm mb-sm">
-            <input 
+            <input
               className="flex-1"
-              value={block.url} 
+              value={block.url}
               onChange={(e) => onChange({ url: e.target.value })}
               placeholder="Image URL"
             />
-            <input 
+            <input
               style={{ width: '80px' }}
-              value={block.width} 
+              value={block.width}
               onChange={(e) => onChange({ width: e.target.value })}
               placeholder="Width"
             />
-            <select 
-              value={block.align} 
+            <select
+              value={block.align}
               onChange={(e) => onChange({ align: e.target.value })}
             >
               <option value="left">Left</option>
@@ -454,8 +495,8 @@ function BlockContent({ block, onChange }) {
     case 'quote':
       return (
         <blockquote style={{ borderLeft: '4px solid #ccc', margin: '0 10px', padding: '0.5em 10px' }}>
-          <textarea 
-            value={block.content} 
+          <textarea
+            value={block.content}
             onChange={(e) => onChange({ content: e.target.value })}
             placeholder="Quote text..."
             style={{ width: '100%', border: 'none', background: 'transparent', fontStyle: 'italic' }}
@@ -466,8 +507,8 @@ function BlockContent({ block, onChange }) {
       return (
         <div className="vb-block-list">
           <div className="flex-between mb-sm">
-            <select 
-              value={block.listType} 
+            <select
+              value={block.listType}
               onChange={(e) => onChange({ listType: e.target.value })}
               className="text-sm p-1"
             >
@@ -481,8 +522,8 @@ function BlockContent({ block, onChange }) {
               {block.items.map((item, i) => (
                 <li key={i} className="mb-xs">
                   <div className="flex gap-xs">
-                    <input 
-                      value={item} 
+                    <input
+                      value={item}
                       onChange={(e) => {
                         const newItems = [...block.items];
                         newItems[i] = e.target.value;
@@ -503,8 +544,8 @@ function BlockContent({ block, onChange }) {
               {block.items.map((item, i) => (
                 <li key={i} className="mb-xs">
                   <div className="flex gap-xs">
-                    <input 
-                      value={item} 
+                    <input
+                      value={item}
                       onChange={(e) => {
                         const newItems = [...block.items];
                         newItems[i] = e.target.value;
@@ -533,8 +574,8 @@ function BlockContent({ block, onChange }) {
       return (
         <div className="flex gap-lg">
           <div className="flex-1">
-            <textarea 
-              value={block.left} 
+            <textarea
+              value={block.left}
               onChange={(e) => onChange({ left: e.target.value })}
               placeholder="Left column..."
               rows={3}
@@ -542,8 +583,8 @@ function BlockContent({ block, onChange }) {
             />
           </div>
           <div className="flex-1">
-            <textarea 
-              value={block.right} 
+            <textarea
+              value={block.right}
               onChange={(e) => onChange({ right: e.target.value })}
               placeholder="Right column..."
               rows={3}
@@ -556,16 +597,16 @@ function BlockContent({ block, onChange }) {
       return (
         <div className="flex-between gap-lg">
           <div className="vb-block-text flex-1">
-            <textarea 
-              value={block.from} 
+            <textarea
+              value={block.from}
               onChange={(e) => onChange({ from: e.target.value })}
               placeholder="From details..."
               rows={3}
             />
           </div>
           <div className="vb-block-text flex-1 text-right">
-            <textarea 
-              value={block.to} 
+            <textarea
+              value={block.to}
               onChange={(e) => onChange({ to: e.target.value })}
               placeholder="To details..."
               rows={3}
@@ -613,13 +654,13 @@ function generateHtml(blocks, layoutMode = 'flow') {
   const hiddenComment = `<!-- VISUAL_BLOCKS:${blocksData}-->`;
 
   let contentHtml = '';
-  
+
   if (layoutMode === 'canvas') {
     const itemsHtml = blocks.map(block => {
       const innerHtml = getBlockHtml(block);
       return `<div style="position: absolute; left: ${block.x || 0}px; top: ${block.y || 0}px; width: ${block.w ? block.w + 'px' : 'auto'};">${innerHtml}</div>`;
     }).join('\n');
-    
+
     contentHtml = `<div style="position: relative; width: 210mm; height: 297mm;">\n${itemsHtml}\n</div>`;
   } else {
     contentHtml = blocks.map(getBlockHtml).join('\n');
@@ -629,38 +670,38 @@ function generateHtml(blocks, layoutMode = 'flow') {
 }
 
 function getBlockHtml(block) {
-    switch (block.type) {
-        case 'heading':
-          return `<h1>${block.content}</h1>`;
-        case 'text':
-          return `<p>${block.content.replace(/\n/g, '<br>')}</p>`;
-        case 'image':
-          return `<div style="text-align: ${block.align}; margin-bottom: 1rem;"><img src="${block.url}" style="max-width: 100%; width: ${block.width};" alt="Image" /></div>`;
-        case 'divider':
-          return `<hr style="border: 0; border-top: 1px solid #ccc; margin: 2rem 0;" />`;
-        case 'spacer':
-          return `<div style="height: ${block.height || '50px'};"></div>`;
-        case 'quote':
-          return `<blockquote style="border-left: 4px solid #ccc; margin: 1.5em 10px; padding: 0.5em 10px; font-style: italic;">${block.content}</blockquote>`;
-        case 'list':
-          const tag = block.listType === 'ol' ? 'ol' : 'ul';
-          const itemsHtml = block.items.map(item => `<li>${item}</li>`).join('');
-          return `<${tag}>${itemsHtml}</${tag}>`;
-        case 'signature':
-          return `<div style="margin-top: 3rem; border-top: 1px solid #000; width: 200px; padding-top: 0.5rem;">Signature</div>`;
-        case '2-col-text':
-          return `<div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
+  switch (block.type) {
+    case 'heading':
+      return `<h1>${block.content}</h1>`;
+    case 'text':
+      return `<p>${block.content.replace(/\n/g, '<br>')}</p>`;
+    case 'image':
+      return `<div style="text-align: ${block.align}; margin-bottom: 1rem;"><img src="${block.url}" style="max-width: 100%; width: ${block.width};" alt="Image" /></div>`;
+    case 'divider':
+      return `<hr style="border: 0; border-top: 1px solid #ccc; margin: 2rem 0;" />`;
+    case 'spacer':
+      return `<div style="height: ${block.height || '50px'};"></div>`;
+    case 'quote':
+      return `<blockquote style="border-left: 4px solid #ccc; margin: 1.5em 10px; padding: 0.5em 10px; font-style: italic;">${block.content}</blockquote>`;
+    case 'list':
+      const tag = block.listType === 'ol' ? 'ol' : 'ul';
+      const itemsHtml = block.items.map(item => `<li>${item}</li>`).join('');
+      return `<${tag}>${itemsHtml}</${tag}>`;
+    case 'signature':
+      return `<div style="margin-top: 3rem; border-top: 1px solid #000; width: 200px; padding-top: 0.5rem;">Signature</div>`;
+    case '2-col-text':
+      return `<div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
 <div style="flex: 1;">${block.left.replace(/\n/g, '<br>')}</div>
 <div style="flex: 1;">${block.right.replace(/\n/g, '<br>')}</div>
 </div>`;
-        case 'invoice-grid':
-          return `
+    case 'invoice-grid':
+      return `
 <div style="display: flex; justify-content: space-between; margin-bottom: 2rem;">
   <div>${block.from.replace(/\n/g, '<br>')}</div>
   <div>${block.to.replace(/\n/g, '<br>')}</div>
 </div>`;
-        case 'items-table':
-          return `
+    case 'items-table':
+      return `
 <table style="width: 100%; border-collapse: collapse; margin-bottom: 2rem;">
   <thead>
     <tr style="background: #f3f4f6;">
@@ -680,8 +721,8 @@ function getBlockHtml(block) {
 <div style="text-align: right; font-size: 1.25rem; font-weight: bold;">
   Total: {{total}}
 </div>`;
-        default: return '';
-      }
+    default: return '';
+  }
 }
 
 function parseBlocksFromHtml(html) {
@@ -696,7 +737,7 @@ function parseBlocksFromHtml(html) {
       // Map legacy modes to new ones
       if (parsed.layoutMode === 'flow') parsed.layoutMode = 'document';
       if (parsed.layoutMode === 'fixed') parsed.layoutMode = 'canvas';
-      
+
       return parsed;
     } catch (e) {
       console.error("Failed to parse blocks", e);
