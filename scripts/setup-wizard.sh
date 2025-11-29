@@ -112,19 +112,19 @@ show_setup_options() {
     fi
 
     if [[ "$docker_available" == "1" && "$FORCE_NATIVE" != "1" ]]; then
-        echo -e "1) 🐳 Docker Setup (Recommended - 5 minutes)" "${GREEN}"
-        echo -e "   ✓ No dependencies required" "${CYAN}"
-        echo -e "   ✓ Works immediately" "${CYAN}"
-        echo -e "   ✓ Isolated environment" "${CYAN}"
+        echo -e "${GREEN}1) [DOCKER] Docker Setup (Recommended - 5 minutes)${NC}"
+        echo -e "${CYAN}   + No dependencies required${NC}"
+        echo -e "${CYAN}   + Works immediately${NC}"
+        echo -e "${CYAN}   + Isolated environment${NC}"
         echo
 
-        echo -e "2) 🔧 Native Setup (15 minutes)" "${YELLOW}"
-        echo -e "   ✓ Full development environment" "${CYAN}"
-        echo -e "   ✓ Direct code access" "${CYAN}"
-        echo -e "   ✓ Customizable configuration" "${CYAN}"
+        echo -e "${YELLOW}2) [NATIVE] Native Setup (15 minutes)${NC}"
+        echo -e "${CYAN}   + Full development environment${NC}"
+        echo -e "${CYAN}   + Direct code access${NC}"
+        echo -e "${CYAN}   + Customizable configuration${NC}"
         echo
 
-        echo -e "3) 📋 Compare Options" "${CYAN}"
+        echo -e "${CYAN}3) [INFO] Compare Options${NC}"
         echo
 
         while true; do
@@ -137,24 +137,58 @@ show_setup_options() {
 
         echo "$choice"
     else
-        write_warning "Docker is not available or was skipped"
         echo
-        echo "🔧 Setting up native development environment..."
+        echo -e "${YELLOW}========================================================${NC}"
+        echo -e "${YELLOW}  [RECOMMENDED] Install Docker${NC}"
+        echo -e "${YELLOW}========================================================${NC}"
         echo
-        echo "This will install the following:"
-        echo "• .NET 8 SDK"
-        echo "• Node.js 18+"
-        echo "• Git"
-        echo "• (Optional) Visual Studio Code"
+        echo -e "${WHITE}Docker provides the easiest setup experience:${NC}"
+        echo -e "${CYAN}  * No dependency conflicts${NC}"
+        echo -e "${CYAN}  * No PATH or environment issues${NC}"
+        echo -e "${CYAN}  * Works immediately after install${NC}"
+        echo -e "${CYAN}  * Easy to reset if something goes wrong${NC}"
         echo
-
-        read -p "Continue with native setup? (Y/n): " choice
-        if [[ "$choice" == "n" || "$choice" == "N" ]]; then
-            write_info "Setup cancelled. Please install Docker first and try again."
-            exit 0
+        if is_macos; then
+            echo -e "${WHITE}Install Docker Desktop:${NC}"
+            echo -e "  brew install --cask docker"
+            echo -e "  ${CYAN}Or download from: https://www.docker.com/products/docker-desktop${NC}"
+        else
+            echo -e "${WHITE}Install Docker:${NC}"
+            echo -e "  sudo apt-get update && sudo apt-get install -y docker.io docker-compose"
+            echo -e "  sudo usermod -aG docker \$USER"
+            echo -e "  ${CYAN}Then log out and back in, or run: newgrp docker${NC}"
         fi
+        echo
+        echo -e "${GRAY}--------------------------------------------------------${NC}"
+        echo
+        echo -e "${GRAY}Alternatively, native setup will install:${NC}"
+        echo -e "${GRAY}  * .NET 8 SDK${NC}"
+        echo -e "${GRAY}  * Node.js 18+${NC}"
+        echo -e "${GRAY}  * Git${NC}"
+        echo
 
-        echo "2"  # Native setup
+        echo -e "${WHITE}Options:${NC}"
+        echo -e "${GREEN}  1) Exit and install Docker first (recommended)${NC}"
+        echo -e "${YELLOW}  2) Continue with native setup${NC}"
+        echo
+
+        while true; do
+            read -p "Select option (1-2): " choice
+            case "$choice" in
+                1)
+                    echo
+                    write_info "Please install Docker using the commands above, then run this wizard again."
+                    exit 0
+                    ;;
+                2)
+                    echo "2"  # Native setup
+                    return
+                    ;;
+                *)
+                    echo "Please enter 1 or 2"
+                    ;;
+            esac
+        done
     fi
 }
 
@@ -163,32 +197,32 @@ show_comparison() {
     write_header "Setup Method Comparison"
     echo
 
-    echo -e "🐳 Docker Setup:" "${GREEN}"
-    echo "  PROS:" "${CYAN}"
-    echo "  • No local dependencies to install" "${CYAN}"
-    echo "  • Consistent environment across machines" "${CYAN}"
-    echo "  • Easy to start fresh (docker-compose down/up)" "${CYAN}"
-    echo "  • No conflicts with existing software" "${CYAN}"
+    echo -e "${GREEN}[DOCKER] Docker Setup:${NC}"
+    echo -e "${CYAN}  PROS:${NC}"
+    echo -e "${CYAN}  * No local dependencies to install${NC}"
+    echo -e "${CYAN}  * Consistent environment across machines${NC}"
+    echo -e "${CYAN}  * Easy to start fresh (docker-compose down/up)${NC}"
+    echo -e "${CYAN}  * No conflicts with existing software${NC}"
     echo
-    echo "  CONS:" "${CYAN}"
-    echo "  • Requires Docker installation" "${CYAN}"
-    echo "  • Slower initial startup" "${CYAN}"
-    echo "  • Uses more disk space" "${CYAN}"
-    echo "  • More complex for debugging" "${CYAN}"
+    echo -e "${CYAN}  CONS:${NC}"
+    echo -e "${CYAN}  * Requires Docker installation${NC}"
+    echo -e "${CYAN}  * Slower initial startup${NC}"
+    echo -e "${CYAN}  * Uses more disk space${NC}"
+    echo -e "${CYAN}  * More complex for debugging${NC}"
     echo
 
-    echo -e "🔧 Native Setup:" "${YELLOW}"
-    echo "  PROS:" "${CYAN}"
-    echo "  • Full development environment" "${CYAN}"
-    echo "  • Direct access to code and tools" "${CYAN}"
-    echo "  • Faster startup and compilation" "${CYAN}"
-    echo "  • Easier debugging and customization" "${CYAN}"
-    echo "  • Less disk space usage" "${CYAN}"
+    echo -e "${YELLOW}[NATIVE] Native Setup:${NC}"
+    echo -e "${CYAN}  PROS:${NC}"
+    echo -e "${CYAN}  * Full development environment${NC}"
+    echo -e "${CYAN}  * Direct access to code and tools${NC}"
+    echo -e "${CYAN}  * Faster startup and compilation${NC}"
+    echo -e "${CYAN}  * Easier debugging and customization${NC}"
+    echo -e "${CYAN}  * Less disk space usage${NC}"
     echo
-    echo "  CONS:" "${CYAN}"
-    echo "  • Requires installing multiple dependencies" "${CYAN}"
-    echo "  • May conflict with existing software versions" "${CYAN}"
-    echo "  • Platform-specific setup required" "${CYAN}"
+    echo -e "${CYAN}  CONS:${NC}"
+    echo -e "${CYAN}  * Requires installing multiple dependencies${NC}"
+    echo -e "${CYAN}  * May conflict with existing software versions${NC}"
+    echo -e "${CYAN}  * Platform-specific setup required${NC}"
     echo
 
     wait_for_enter "Press Enter to return to options..."
@@ -197,7 +231,7 @@ show_comparison() {
 
 # Docker setup
 start_docker_setup() {
-    write_header "🐳 Docker Setup"
+    write_header "[DOCKER] Docker Setup"
     echo "Setting up DocForge with Docker containers..."
     echo
 
@@ -222,14 +256,14 @@ start_docker_setup() {
     if docker-compose up -d; then
         write_success "DocForge is now running!"
         echo
-        echo "🌐 Application URLs:" "${CYAN}"
-        echo -e "   API: http://localhost:5000" "${WHITE}"
-        echo -e "   API Documentation: http://localhost:5000/swagger" "${WHITE}"
+        echo -e "${CYAN}[URLs] Application URLs:${NC}"
+        echo -e "${WHITE}   API: http://localhost:5000${NC}"
+        echo -e "${WHITE}   API Documentation: http://localhost:5000/swagger${NC}"
         echo
-        echo "🔧 Management Commands:" "${CYAN}"
-        echo -e "   View logs: docker-compose logs -f" "${CYAN}"
-        echo -e "   Stop application: docker-compose down" "${CYAN}"
-        echo -e "   Restart application: docker-compose restart" "${CYAN}"
+        echo -e "${CYAN}[COMMANDS] Management Commands:${NC}"
+        echo -e "${CYAN}   View logs: docker-compose logs -f${NC}"
+        echo -e "${CYAN}   Stop application: docker-compose down${NC}"
+        echo -e "${CYAN}   Restart application: docker-compose restart${NC}"
         echo
 
         wait_for_enter "Press Enter to open the application in your browser..."
@@ -250,7 +284,7 @@ start_docker_setup() {
 
 # Native setup
 start_native_setup() {
-    write_header "🔧 Native Setup"
+    write_header "[NATIVE] Native Setup"
     echo "Setting up native development environment..."
     echo
 
@@ -307,13 +341,13 @@ start_native_setup() {
     echo
     write_success "Native setup completed!"
     echo
-    echo "🚀 Next Steps:" "${CYAN}"
-    echo -e "   1. Run: ./docforge.sh" "${WHITE}"
-    echo -e "   2. Select option 2 to start the backend" "${WHITE}"
-    echo -e "   3. Select option 3 to start the frontend" "${WHITE}"
-    echo -e "   4. Select option 8 to open in your browser" "${WHITE}"
+    echo -e "${CYAN}[NEXT] Next Steps:${NC}"
+    echo -e "${WHITE}   1. Run: ./docforge.sh${NC}"
+    echo -e "${WHITE}   2. Select option 2 to start the backend${NC}"
+    echo -e "${WHITE}   3. Select option 3 to start the frontend${NC}"
+    echo -e "${WHITE}   4. Select option 8 to open in your browser${NC}"
     echo
-    echo -e "💡 Or use option 4 to start both services at once!" "${YELLOW}"
+    echo -e "${YELLOW}[TIP] Or use option 4 to start both services at once!${NC}"
     echo
 
     wait_for_enter "Press Enter to start the DocForge CLI..."

@@ -2,8 +2,8 @@
 # DocForge Dependency Checker for Linux/macOS
 # This script checks for and optionally installs required dependencies
 
-# Enable strict error handling
-set -euo pipefail
+# Enable strict error handling (but not as strict to avoid hanging)
+set -uo pipefail
 
 # Color output functions
 RED='\033[0;31m'
@@ -156,9 +156,35 @@ validate_version_requirement() {
 
     # Try version comparison (basic)
     if [[ -n "$min_version" ]]; then
-        if command -v sort >/dev/null 2>&1; then
-            if printf '%s\n%s\n' "$min_version" "$installed" | sort -V -C; then
+        # Try sort -V (GNU coreutils) - not available on older macOS
+        if printf '%s\n%s\n' "$min_version" "$installed" | sort -V -C 2>/dev/null; then
+            return 0
+        fi
+
+        # Fallback: simple numeric comparison for major.minor.patch
+        # This handles most common version formats
+        local min_major min_minor min_patch inst_major inst_minor inst_patch
+        IFS='.' read -r min_major min_minor min_patch <<< "${min_version%%[^0-9.]*}"
+        IFS='.' read -r inst_major inst_minor inst_patch <<< "${installed%%[^0-9.]*}"
+
+        # Default to 0 if not present
+        min_major=${min_major:-0}
+        min_minor=${min_minor:-0}
+        min_patch=${min_patch:-0}
+        inst_major=${inst_major:-0}
+        inst_minor=${inst_minor:-0}
+        inst_patch=${inst_patch:-0}
+
+        # Compare major.minor.patch
+        if (( inst_major > min_major )); then
+            return 0
+        elif (( inst_major == min_major )); then
+            if (( inst_minor > min_minor )); then
                 return 0
+            elif (( inst_minor == min_minor )); then
+                if (( inst_patch >= min_patch )); then
+                    return 0
+                fi
             fi
         fi
     fi
@@ -174,7 +200,7 @@ check_dependency() {
     local platform="$3"
     local package_manager="$4"
 
-    write_progress "Checking $dep_name" 0
+    write_progress "Checking $dep_name" 0 >&2
 
     # Get platform-specific configuration
     local check_cmd=""
@@ -182,42 +208,57 @@ check_dependency() {
     local install_cmd=""
     local manual_url=""
 
+    if [[ ! -f "$DEPENDENCIES_FILE" ]]; then
+        echo "UNKNOWN||Dependencies file not found: $DEPENDENCIES_FILE"
+        return
+    fi
+
     if command -v jq >/dev/null 2>&1; then
-        check_cmd=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".checkCommand // empty" "$DEPENDENCIES_FILE")
-        version_pattern=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".versionPattern // empty" "$DEPENDENCIES_FILE")
-        install_cmd=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".installCommand // empty" "$DEPENDENCIES_FILE")
-        manual_url=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".manualInstallUrl // empty" "$DEPENDENCIES_FILE")
+        check_cmd=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".checkCommand // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
+        version_pattern=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".versionPattern // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
+        install_cmd=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".installCommand // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
+        manual_url=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".manualInstallUrl // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
     fi
 
     if [[ -z "$check_cmd" ]]; then
-        echo "UNKNOWN||No check command specified"
+        echo "UNKNOWN||No check command specified for $dep_id on $platform"
         return
     fi
 
     # Execute check command
     local result
+    local status="UNKNOWN"
+    local version=""
+    local message=""
+
     if result=$(eval "$check_cmd" 2>/dev/null); then
-        local version=$(extract_version_from_output "$result")
+        version=$(extract_version_from_output "$result")
 
         # Get version requirements from JSON
         local required_version=""
         local min_version=""
         if command -v jq >/dev/null 2>&1; then
-            required_version=$(jq -r ".dependencies.\"$dep_id\".version // empty" "$DEPENDENCIES_FILE")
-            min_version=$(jq -r ".dependencies.\"$dep_id\".minVersion // empty" "$DEPENDENCIES_FILE")
+            required_version=$(jq -r ".dependencies.\"$dep_id\".version // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
+            min_version=$(jq -r ".dependencies.\"$dep_id\".minVersion // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
         fi
 
         if validate_version_requirement "$version" "$version_pattern" "$min_version"; then
-            write_success "$dep_name ($version)"
-            echo "OK|$version|Installed and valid"
+            status="OK"
+            message="Installed and valid"
+            write_success "$dep_name ($version)" >&2
         else
-            write_warning "$dep_name ($version) - version incompatible"
-            echo "WRONG_VERSION|$version|Version incompatible"
+            status="WRONG_VERSION"
+            message="Version incompatible"
+            write_warning "$dep_name ($version) - version incompatible" >&2
         fi
     else
-        write_error "$dep_name - not found"
-        echo "MISSING||Not installed"
+        status="MISSING"
+        message="Not installed"
+        write_error "$dep_name - not found" >&2
     fi
+
+    # Output the result in the expected format
+    echo "$status|$version|$message"
 }
 
 install_dependency() {
@@ -239,9 +280,9 @@ install_dependency() {
     local notes=""
 
     if command -v jq >/dev/null 2>&1; then
-        install_cmd=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".installCommand // empty" "$DEPENDENCIES_FILE")
-        manual_url=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".manualInstallUrl // empty" "$DEPENDENCIES_FILE")
-        notes=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".notes // empty" "$DEPENDENCIES_FILE")
+        install_cmd=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".installCommand // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
+        manual_url=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".manualInstallUrl // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
+        notes=$(jq -r ".dependencies.\"$dep_id\".\"$platform\".notes // empty" "$DEPENDENCIES_FILE" 2>/dev/null || echo "")
     fi
 
     # Try alternative installation methods based on platform
@@ -284,44 +325,39 @@ install_dependency() {
         return 1
     fi
 
-    try {
-        write_info "Installing $dep_name..."
-        write_progress "Installing $dep_name" 50
+    write_info "Installing $dep_name..."
+    write_progress "Installing $dep_name" 50
 
-        # Check for sudo access if needed
-        if [[ "$install_cmd" == sudo* ]] && [[ "$EUID" -ne 0 ]]; then
-            if ! sudo -n true 2>/dev/null; then
-                write_warning "This installation requires sudo privileges"
-                write_info "You may be prompted for your password"
-            fi
+    # Check for sudo access if needed
+    if [[ "$install_cmd" == sudo* ]] && [[ "$EUID" -ne 0 ]]; then
+        if ! sudo -n true 2>/dev/null; then
+            write_warning "This installation requires sudo privileges"
+            write_info "You may be prompted for your password"
         fi
+    fi
 
-        if eval "$install_cmd"; then
-            write_success "$dep_name installed successfully"
+    if eval "$install_cmd"; then
+        write_success "$dep_name installed successfully"
 
-            # Verify installation
-            sleep 2
-            local check_result=$(check_dependency "$dep_id" "$dep_name" "$platform" "$package_manager")
-            local status=$(echo "$check_result" | cut -d'|' -f1)
-            local version=$(echo "$check_result" | cut -d'|' -f2)
+        # Verify installation
+        sleep 2
+        local check_result=$(check_dependency "$dep_id" "$dep_name" "$platform" "$package_manager")
+        local status=$(echo "$check_result" | cut -d'|' -f1)
+        local version=$(echo "$check_result" | cut -d'|' -f2)
 
-            if [[ "$status" == "OK" ]]; then
-                write_success "$dep_name verified: $version"
-                return 0
-            else
-                write_warning "$dep_name installed but verification failed"
-                return 1
-            fi
+        if [[ "$status" == "OK" ]]; then
+            write_success "$dep_name verified: $version"
+            return 0
         else
-            write_error "Installation failed for $dep_name"
-            show_manual_installation_instructions "$dep_name" "$manual_url" "$notes"
+            write_warning "$dep_name installed but verification failed"
             return 1
         fi
-    } catch {
-        write_error "Installation error for $dep_name: $_"
+    else
+        local install_error=$?
+        write_error "Installation failed for $dep_name (exit code: $install_error)"
         show_manual_installation_instructions "$dep_name" "$manual_url" "$notes"
         return 1
-    }
+    fi
 }
 
 show_manual_installation_instructions() {
@@ -355,10 +391,12 @@ show_dependency_summary() {
     local ok=0
     local issues=0
 
+    
     for result in "${results[@]}"; do
         IFS='|' read -r dep_id status version message <<< "$result"
         ((total++))
 
+        
         case "$status" in
             "OK")
                 write_success "$dep_id: $version"
@@ -443,9 +481,14 @@ main() {
     else
         # Get default dependencies for platform
         if command -v jq >/dev/null 2>&1; then
+            local jq_output
+            jq_output=$(jq -r ".platforms.\"$platform\".dependencies[]?" "$PLATFORM_FILE" 2>/dev/null) || {
+                write_warning "Failed to parse dependencies from config file"
+                jq_output="git dotnet-8 nodejs chrome"
+            }
             while IFS= read -r dep; do
-                deps_to_check+=("$dep")
-            done < <(jq -r ".platforms.\"$platform\".dependencies[]?" "$PLATFORM_FILE")
+                [[ -n "$dep" ]] && deps_to_check+=("$dep")
+            done <<< "$jq_output"
         else
             # Fallback dependencies
             deps_to_check=("git" "dotnet-8" "nodejs" "chrome")
@@ -463,10 +506,10 @@ main() {
         # Get dependency name from JSON or use dep_id as fallback
         local dep_name="$dep_id"
         if command -v jq >/dev/null 2>&1; then
-            dep_name=$(jq -r ".dependencies.\"$dep_id\".name // \"$dep_id\"" "$DEPENDENCIES_FILE")
+            dep_name=$(jq -r ".dependencies.\"$dep_id\".name // \"$dep_id\"" "$DEPENDENCIES_FILE" 2>/dev/null || echo "$dep_id")
         fi
 
-        write_progress "Checking $dep_name" $progress
+        write_progress "Checking $dep_name" $progress >&2
 
         # Check dependency
         local check_result=$(check_dependency "$dep_id" "$dep_name" "$platform" "$package_manager")
@@ -484,7 +527,7 @@ main() {
         fi
     done
 
-    write_progress "Complete" 100
+    write_progress "Complete" 100 >&2
     echo
 
     # Show summary

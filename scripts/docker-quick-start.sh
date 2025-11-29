@@ -10,6 +10,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+GRAY='\033[0;90m'
 WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
@@ -227,23 +228,23 @@ show_logs() {
 
 # Show menu
 show_menu() {
-    write_header "🐳 DocForge Docker Quick Start"
+    write_header "[DOCKER] DocForge Docker Quick Start"
 
     echo -e "${CYAN}Choose your deployment mode:${NC}"
     echo
-    echo -e "1) 🚀 Quick Start (Development) ${GREEN}"
-    echo -e "   • Fast startup, live reloading ${GRAY}"
-    echo -e "   • Frontend: http://localhost:5173 ${GRAY}"
-    echo -e "   • API: http://localhost:5000 ${GRAY}"
+    echo -e "${GREEN}1) [DEV] Quick Start (Development)${NC}"
+    echo -e "${GRAY}   * Fast startup, live reloading${NC}"
+    echo -e "${GRAY}   * Frontend: http://localhost:5173${NC}"
+    echo -e "${GRAY}   * API: http://localhost:5000${NC}"
     echo
-    echo -e "2) 🏭 Production Mode ${YELLOW}"
-    echo -e "   • Optimized build, single port ${GRAY}"
-    echo -e "   • Everything: http://localhost ${GRAY}"
-    echo -e "   • Built-in reverse proxy ${GRAY}"
+    echo -e "${YELLOW}2) [PROD] Production Mode${NC}"
+    echo -e "${GRAY}   * Optimized build, single port${NC}"
+    echo -e "${GRAY}   * Everything: http://localhost${NC}"
+    echo -e "${GRAY}   * Built-in reverse proxy${NC}"
     echo
-    echo -e "3) 📋 View Logs"
-    echo -e "4) 🛑 Stop Services"
-    echo -e "5) ❌ Exit"
+    echo -e "3) [LOGS] View Logs"
+    echo -e "4) [STOP] Stop Services"
+    echo -e "5) [EXIT] Exit"
     echo
 
     while true; do
@@ -268,7 +269,7 @@ show_menu() {
             stop_docforge
             ;;
         5)
-            echo -e "${GREEN}👋 Goodbye!${NC}"
+            echo -e "${GREEN}Goodbye!${NC}"
             exit 0
             ;;
     esac
@@ -327,19 +328,19 @@ else
         fi
     else
         echo
-        write_info "Docker setup instructions:" -e "${CYAN}"
+        write_info "Docker setup instructions:"
         if is_macos; then
             echo -e "${WHITE}1. Install Docker Desktop:${NC}"
-            echo -e "   brew install --cask docker${NC}"
+            echo -e "   brew install --cask docker"
         else
             echo -e "${WHITE}1. Install Docker:${NC}"
-            echo -e "   Follow instructions at: https://docs.docker.com/get-docker/${NC}"
+            echo -e "   Follow instructions at: https://docs.docker.com/get-docker/"
         fi
         echo
         echo -e "${WHITE}2. Start Docker${NC}"
         if is_linux; then
-            echo -e "   sudo systemctl start docker${NC}"
-            echo -e "   sudo systemctl enable docker${NC}"
+            echo -e "   sudo systemctl start docker"
+            echo -e "   sudo systemctl enable docker"
         fi
         echo
         echo -e "${WHITE}3. Run this script again${NC}"
