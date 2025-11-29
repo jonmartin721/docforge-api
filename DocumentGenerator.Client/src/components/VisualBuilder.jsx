@@ -15,7 +15,7 @@ export default function VisualBuilder({ initialContent, onChange }) {
 
   const addBlock = (type) => {
     const newBlock = {
-      id: `block-${crypto.randomUUID()}`,
+      id: `block-${generateUUID()}`,
       type,
       content: getDefaultContent(type),
       styles: { textAlign: 'left' }
@@ -248,11 +248,21 @@ function parseContent(html) {
   return Array.from(div.children).map((el) => {
     const type = getElementType(el);
     return {
-      id: `block-${crypto.randomUUID()}`,
+      id: `block-${generateUUID()}`,
       type,
       content: el.innerHTML,
       styles: getElementStyles(el)
     };
+  });
+}
+
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
   });
 }
 
