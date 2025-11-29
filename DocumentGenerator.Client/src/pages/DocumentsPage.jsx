@@ -20,6 +20,7 @@ export default function DocumentsPage() {
       const data = await documentService.getAll();
       setDocuments(data);
     } catch (err) {
+      console.error(err);
       setError('Failed to load documents');
     } finally {
       setLoading(false);
@@ -38,6 +39,7 @@ export default function DocumentsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
+      console.error(err);
       setError('Failed to download document');
     }
   };
@@ -50,6 +52,7 @@ export default function DocumentsPage() {
       // Note: We can't revoke the URL immediately if we want it to persist in the new tab
       // The browser will clean it up when the document is unloaded
     } catch (err) {
+      console.error(err);
       setError('Failed to view document');
     }
   };
@@ -64,6 +67,7 @@ export default function DocumentsPage() {
       setDeleteModal({ isOpen: false, docId: null });
       await loadDocuments();
     } catch (err) {
+      console.error(err);
       setError('Failed to delete document');
       setDeleteModal({ isOpen: false, docId: null });
     }

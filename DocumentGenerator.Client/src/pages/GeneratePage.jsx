@@ -17,7 +17,7 @@ export default function GeneratePage() {
 
   useEffect(() => {
     loadTemplate();
-  }, [templateId]);
+  }, [templateId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTemplate = async () => {
     try {
@@ -36,6 +36,7 @@ export default function GeneratePage() {
         setJsonData(JSON.stringify(sampleData, null, 2));
       }
     } catch (err) {
+      console.error(err);
       setError('Failed to load template');
     } finally {
       setLoading(false);
@@ -49,7 +50,7 @@ export default function GeneratePage() {
 
     try {
       const parsedData = JSON.parse(jsonData);
-      const doc = await documentService.generate(templateId, parsedData);
+      await documentService.generate(templateId, parsedData);
       setSuccess(true);
 
       setTimeout(() => {
