@@ -41,7 +41,7 @@ namespace DocumentGenerator.API.Middleware
                     response.Message = "Validation Failed";
                     response.Errors = validationEx.Errors.Select(e => e.ErrorMessage).ToList();
                     break;
-                
+
                 case KeyNotFoundException:
                     context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     response.Message = "Resource not found";

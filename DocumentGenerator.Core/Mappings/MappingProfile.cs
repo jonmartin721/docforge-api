@@ -12,7 +12,7 @@ namespace DocumentGenerator.Core.Mappings
             CreateMap<CreateTemplateDto, Template>();
             CreateMap<UpdateTemplateDto, Template>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
-            
+
             CreateMap<Document, DocumentDto>();
         }
     }

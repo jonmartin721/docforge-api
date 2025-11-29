@@ -61,13 +61,13 @@ namespace DocumentGenerator.Tests.Unit
             };
 
             // DocumentService uses context directly, so we add template to context.
-            
+
             _context.Templates.Add(template);
             await _context.SaveChangesAsync();
 
             _mockPdfService.Setup(s => s.GeneratePdfAsync(It.IsAny<string>()))
                 .ReturnsAsync(new byte[] { 1, 2, 3 });
-                
+
             _mockMapper.Setup(m => m.Map<DocumentDto>(It.IsAny<Document>()))
                 .Returns((Document d) => new DocumentDto { Id = d.Id, TemplateName = "Test Template", DownloadUrl = "url" });
 
@@ -77,7 +77,7 @@ namespace DocumentGenerator.Tests.Unit
             // Assert
             result.Should().NotBeNull();
             result.TemplateName.Should().Be("Test Template");
-            
+
             var doc = await _context.Documents.FindAsync(result.Id);
             doc.Should().NotBeNull();
             doc!.StoragePath.Should().NotBeEmpty();
@@ -98,12 +98,12 @@ namespace DocumentGenerator.Tests.Unit
                 GeneratedAt = DateTime.UtcNow
             };
             _context.Documents.Add(document);
-            
+
             var template = new Template { Id = templateId, Name = "Test", CreatedByUserId = userId };
             _context.Templates.Add(template);
-            
+
             await _context.SaveChangesAsync();
-            
+
             _mockMapper.Setup(m => m.Map<DocumentDto>(It.IsAny<Document>()))
                 .Returns(new DocumentDto { Id = document.Id, TemplateName = "Test", DownloadUrl = "url" });
 

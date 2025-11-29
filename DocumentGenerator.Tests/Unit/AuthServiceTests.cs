@@ -54,7 +54,7 @@ namespace DocumentGenerator.Tests.Unit
             // Assert
             result.Should().NotBeNull();
             result.Token.Should().NotBeNullOrEmpty();
-            
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == "testuser");
             user.Should().NotBeNull();
             user!.Email.Should().Be("test@example.com");
