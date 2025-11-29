@@ -11,7 +11,7 @@ using Xunit;
 
 namespace DocumentGenerator.Tests.Unit
 {
-    public class DocumentServiceTests
+    public class DocumentServiceTests : IDisposable
     {
         private readonly DocumentService _documentService;
         private readonly ApplicationDbContext _context;
@@ -32,6 +32,12 @@ namespace DocumentGenerator.Tests.Unit
             _mockMapper = new Mock<IMapper>();
 
             _documentService = new DocumentService(_context, _mockPdfService.Object, _mockMapper.Object);
+        }
+
+        public void Dispose()
+        {
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
         }
 
         [Fact]
