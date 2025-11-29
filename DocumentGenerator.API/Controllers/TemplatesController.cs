@@ -4,6 +4,7 @@ using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DocumentGenerator.API.Extensions;
+using DocumentGenerator.API.Middleware;
 
 namespace DocumentGenerator.API.Controllers
 {
@@ -20,12 +21,15 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<TemplateDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<TemplateDto>>> GetAll()
         {
             return Ok(await _templateService.GetAllAsync());
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TemplateDto>> GetById(Guid id)
         {
             var template = await _templateService.GetByIdAsync(id);
@@ -34,36 +38,29 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<TemplateDto>> Create(CreateTemplateDto createDto)
         {
-            try
-            {
-                var userId = this.GetUserId();
-                var template = await _templateService.CreateAsync(createDto, userId);
-                return CreatedAtAction(nameof(GetById), new { id = template.Id }, template);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = this.GetUserId();
+            var template = await _templateService.CreateAsync(createDto, userId);
+            return CreatedAtAction(nameof(GetById), new { id = template.Id }, template);
         }
 
         [HttpPut("{id}")]
+        [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TemplateDto>> Update(Guid id, UpdateTemplateDto updateDto)
         {
-            try
-            {
-                var template = await _templateService.UpdateAsync(id, updateDto);
-                if (template == null) return NotFound();
-                return Ok(template);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var template = await _templateService.UpdateAsync(id, updateDto);
+            if (template == null) return NotFound();
+            return Ok(template);
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> Delete(Guid id)
         {
             var result = await _templateService.DeleteAsync(id);
