@@ -31,7 +31,11 @@ export default function TemplateForm() {
         };
 
         if (isEditing) {
+            setLoading(true);
             loadTemplate();
+        } else {
+            setFormData({ name: '', content: '' });
+            setLoading(false);
         }
     }, [id, isEditing]);
 

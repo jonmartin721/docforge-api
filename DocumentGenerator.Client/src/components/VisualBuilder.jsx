@@ -245,10 +245,10 @@ function parseContent(html) {
   const div = document.createElement('div');
   div.innerHTML = html;
 
-  return Array.from(div.children).map((el, index) => {
+  return Array.from(div.children).map((el) => {
     const type = getElementType(el);
     return {
-      id: `block-${index}-${crypto.randomUUID()}`,
+      id: `block-${crypto.randomUUID()}`,
       type,
       content: el.innerHTML,
       styles: getElementStyles(el)
