@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import TemplatesPage from './pages/TemplatesPage';
+import TemplateForm from './pages/TemplateForm';
 import GeneratePage from './pages/GeneratePage';
 import DocumentsPage from './pages/DocumentsPage';
 
@@ -46,6 +47,22 @@ function App() {
           element={
             <ProtectedRoute>
               <TemplatesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates/new"
+          element={
+            <ProtectedRoute>
+              <TemplateForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates/:id/edit"
+          element={
+            <ProtectedRoute>
+              <TemplateForm />
             </ProtectedRoute>
           }
         />

@@ -154,20 +154,45 @@ export default function VisualBuilder({ initialContent, onChange }) {
 
   return (
     <div className="visual-builder">
-      <div className="vb-toolbar">
-        <div className="vb-tools-group">
-          <button type="button" onClick={() => addBlock('heading1')} title="Heading 1">H1</button>
-          <button type="button" onClick={() => addBlock('heading2')} title="Heading 2">H2</button>
-          <button type="button" onClick={() => addBlock('heading3')} title="Heading 3">H3</button>
-          <button type="button" onClick={() => addBlock('text')} title="Paragraph">¶</button>
+      <div className="vb-sidebar">
+        <div className="vb-sidebar-header">
+          Tools
         </div>
-        <div className="vb-tools-group">
-          <button type="button" onClick={() => addBlock('list')} title="List">≣</button>
-          <button type="button" onClick={() => addBlock('table')} title="Table">▦</button>
-          <button type="button" onClick={() => addBlock('divider')} title="Divider">—</button>
+        <div className="vb-tools">
+          <button type="button" className="vb-tool" onClick={() => addBlock('heading1')}>
+            <span className="vb-tool-icon">H1</span>
+            <span className="vb-tool-label">Heading 1</span>
+          </button>
+          <button type="button" className="vb-tool" onClick={() => addBlock('heading2')}>
+            <span className="vb-tool-icon">H2</span>
+            <span className="vb-tool-label">Heading 2</span>
+          </button>
+          <button type="button" className="vb-tool" onClick={() => addBlock('heading3')}>
+            <span className="vb-tool-icon">H3</span>
+            <span className="vb-tool-label">Heading 3</span>
+          </button>
+          <button type="button" className="vb-tool" onClick={() => addBlock('text')}>
+            <span className="vb-tool-icon">¶</span>
+            <span className="vb-tool-label">Text</span>
+          </button>
+          <button type="button" className="vb-tool" onClick={() => addBlock('list')}>
+            <span className="vb-tool-icon">≣</span>
+            <span className="vb-tool-label">List</span>
+          </button>
+          <button type="button" className="vb-tool" onClick={() => addBlock('table')}>
+            <span className="vb-tool-icon">▦</span>
+            <span className="vb-tool-label">Table</span>
+          </button>
+          <button type="button" className="vb-tool" onClick={() => addBlock('divider')}>
+            <span className="vb-tool-icon">—</span>
+            <span className="vb-tool-label">Divider</span>
+          </button>
         </div>
-        <div className="vb-tools-group ml-auto">
-          <button type="button" className="btn-danger" onClick={handleClear}>Clear All</button>
+
+        <div className="vb-sidebar-footer">
+          <button type="button" className="btn btn-danger w-full" onClick={handleClear}>
+            Clear All
+          </button>
         </div>
       </div>
 
