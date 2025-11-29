@@ -85,6 +85,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Health check endpoint for Docker/container orchestration
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+    .ExcludeFromDescription();
+
 // 4. Apply Migrations
 using (var scope = app.Services.CreateScope())
 {
