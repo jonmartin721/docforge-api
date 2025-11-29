@@ -145,6 +145,31 @@ function Do-Test {
     Wait-For-Enter
 }
 
+function Do-Clear-Data {
+    Write-Host "⚠ WARNING: This will delete all data (Database & Generated Files)!" -ForegroundColor Red
+    $confirm = Read-Host "Are you sure? (y/N)"
+    if ($confirm -ne "y" -and $confirm -ne "Y") {
+        Write-Host "Cancelled."
+        Wait-For-Enter
+        return
+    }
+
+    Do-Stop-All
+    
+    Write-Host "Deleting database..."
+    if (Test-Path "$API_DIR\documentgenerator.db") {
+        Remove-Item "$API_DIR\documentgenerator.db" -Force
+    }
+    
+    Write-Host "Deleting generated documents..."
+    if (Test-Path "$API_DIR\GeneratedDocuments") {
+        Get-ChildItem "$API_DIR\GeneratedDocuments" | Remove-Item -Recurse -Force
+    }
+    
+    Write-Host "Data cleared!" -ForegroundColor Green
+    Wait-For-Enter
+}
+
 # Main Loop
 while ($true) {
     Print-Header
@@ -161,6 +186,8 @@ while ($true) {
     Write-Host "  8) 🌍 Open App in Browser"
     Write-Host "  9) 🧪 Run Tests"
     Write-Host ""
+    Write-Host "  r) 🔄 Refresh Status"
+    Write-Host "  c) 🗑️ Clear All Data"
     Write-Host "  q) Quit"
     Write-Host ""
     $option = Read-Host "Select an option"
@@ -175,6 +202,8 @@ while ($true) {
         "7" { Do-View-Logs "client.log" "Frontend" }
         "8" { Do-Open-Browser }
         "9" { Do-Test }
+        "r" { } # Just loop to refresh
+        "c" { Do-Clear-Data }
         "q" { exit }
         Default { Write-Host "Invalid option"; Start-Sleep -Seconds 1 }
     }
