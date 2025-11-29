@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
-EXPOSE 80
-EXPOSE 443
+EXPOSE 8080
 RUN apt-get update && apt-get install -y \
+    curl \
     libgconf-2-4 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
