@@ -1,16 +1,8 @@
-import { useState, useEffect } from 'react';
 import './TemplateEditor.css';
 
-export default function TemplateEditor({ initialContent, onChange }) {
-  const [content, setContent] = useState(initialContent || '');
-
-  useEffect(() => {
-    setContent(initialContent || '');
-  }, [initialContent]);
-
+export default function TemplateEditor({ value, onChange }) {
   const handleChange = (e) => {
     const newContent = e.target.value;
-    setContent(newContent);
     onChange(newContent);
   };
 
@@ -20,14 +12,13 @@ export default function TemplateEditor({ initialContent, onChange }) {
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const text = content;
+    const text = value || '';
     const before = text.substring(0, start);
     const after = text.substring(end, text.length);
     const newContent = `${before}{{${varName}}}${after}`;
-    
-    setContent(newContent);
+
     onChange(newContent);
-    
+
     // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus();
@@ -45,27 +36,27 @@ export default function TemplateEditor({ initialContent, onChange }) {
         <button type="button" onClick={() => insertVariable('date')} className="btn btn-xs btn-secondary">Date</button>
         <button type="button" onClick={() => insertVariable('items')} className="btn btn-xs btn-secondary">Items Loop</button>
       </div>
-      
+
       <div className="editor-panes">
         <div className="editor-pane code-pane">
           <div className="pane-header">HTML Source</div>
           <textarea
             id="template-code-editor"
-            value={content}
+            value={value || ''}
             onChange={handleChange}
             placeholder="<h1>{{title}}</h1>"
             spellCheck="false"
           />
         </div>
-        
+
         <div className="editor-pane preview-pane">
           <div className="pane-header">Live Preview</div>
           <div className="preview-container">
             <div className="preview-paper">
-              <div 
+              <div
                 className="preview-content"
-                dangerouslySetInnerHTML={{ 
-                  __html: content.replace(/{{(.*?)}}/g, '<span class="var-highlight">$1</span>') 
+                dangerouslySetInnerHTML={{
+                  __html: (value || '').replace(/{{(.*?)}}/g, '<span class="var-highlight">$1</span>')
                 }}
               />
             </div>

@@ -16,31 +16,37 @@ export default function GeneratePage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    loadTemplate();
-  }, [templateId]);
+    const loadTemplate = async () => {
+      try {
+        const data = await templateService.getById(templateId);
+        setTemplate(data);
 
-  const loadTemplate = async () => {
-    try {
-      const data = await templateService.getById(templateId);
-      setTemplate(data);
+        // Extract variables from template
+        const variables = [...data.content.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
+        const uniqueVars = [...new Set(variables)];
 
-      // Extract variables from template
-      const variables = [...data.content.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
-      const uniqueVars = [...new Set(variables)];
-
-      if (uniqueVars.length > 0) {
-        const sampleData = {};
-        uniqueVars.forEach(v => {
-          sampleData[v] = '';
-        });
-        setJsonData(JSON.stringify(sampleData, null, 2));
+        if (uniqueVars.length > 0) {
+          const sampleData = {};
+          uniqueVars.forEach(v => {
+            sampleData[v] = '';
+          });
+          setJsonData(JSON.stringify(sampleData, null, 2));
+        } else {
+          setJsonData('{\n  \n}');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load template');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError('Failed to load template');
-    } finally {
-      setLoading(false);
+    };
+
+    if (templateId) {
+      setLoading(true);
+      loadTemplate();
     }
-  };
+  }, [templateId]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -49,7 +55,7 @@ export default function GeneratePage() {
 
     try {
       const parsedData = JSON.parse(jsonData);
-      const doc = await documentService.generate(templateId, parsedData);
+      await documentService.generate(templateId, parsedData);
       setSuccess(true);
 
       setTimeout(() => {

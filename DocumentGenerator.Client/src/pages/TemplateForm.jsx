@@ -18,22 +18,26 @@ export default function TemplateForm() {
     const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'code'
 
     useEffect(() => {
-        if (isEditing) {
-            loadTemplate();
-        }
-    }, [id]);
+        const loadTemplate = async () => {
+            try {
+                const data = await templateService.getById(id);
+                setFormData({ name: data.name, content: data.content });
+            } catch (err) {
+                setError('Failed to load template');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const loadTemplate = async () => {
-        try {
-            const data = await templateService.getById(id);
-            setFormData({ name: data.name, content: data.content });
-        } catch (err) {
-            setError('Failed to load template');
-            console.error(err);
-        } finally {
+        if (isEditing) {
+            setLoading(true);
+            loadTemplate();
+        } else {
+            setFormData({ name: '', content: '' });
             setLoading(false);
         }
-    };
+    }, [id, isEditing]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -129,7 +133,7 @@ export default function TemplateForm() {
                                 </div>
                             ) : (
                                 <TemplateEditor
-                                    initialContent={formData.content}
+                                    value={formData.content}
                                     onChange={(newContent) =>
                                         setFormData({ ...formData, content: newContent })
                                     }
