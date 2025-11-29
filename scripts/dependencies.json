@@ -1,0 +1,234 @@
+{
+  "dependencies": {
+    "dotnet-8": {
+      "name": ".NET 8 SDK",
+      "description": "Required for backend development",
+      "version": "8.0.*",
+      "minVersion": "8.0.0",
+      "required": true,
+      "category": "development",
+      "windows": {
+        "packageManager": "winget",
+        "packageId": "Microsoft.DotNet.SDK.8",
+        "checkCommand": "dotnet --version",
+        "validateCommand": "dotnet --list-sdks",
+        "versionPattern": "^8\\.",
+        "installCommand": "winget install Microsoft.DotNet.SDK.8 --accept-source-agreements --accept-package-agreements",
+        "manualInstallUrl": "https://dotnet.microsoft.com/download/dotnet/8.0",
+        "envVar": "DOTNET_ROOT"
+      },
+      "linux": {
+        "packageManager": "snap",
+        "packageName": "dotnet-sdk",
+        "checkCommand": "dotnet --version",
+        "validateCommand": "dotnet --list-sdks",
+        "versionPattern": "^8\\.",
+        "installCommand": "sudo snap install dotnet-sdk --classic",
+        "aptCommand": "sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0",
+        "manualInstallUrl": "https://dotnet.microsoft.com/download/dotnet/8.0"
+      },
+      "macos": {
+        "packageManager": "brew",
+        "packageName": "dotnet",
+        "checkCommand": "dotnet --version",
+        "validateCommand": "dotnet --list-sdks",
+        "versionPattern": "^8\\.",
+        "installCommand": "brew install dotnet",
+        "manualInstallUrl": "https://dotnet.microsoft.com/download/dotnet/8.0"
+      }
+    },
+    "nodejs": {
+      "name": "Node.js",
+      "description": "Required for frontend development",
+      "version": "18.*",
+      "minVersion": "18.0.0",
+      "required": true,
+      "category": "development",
+      "windows": {
+        "packageManager": "winget",
+        "packageId": "OpenJS.NodeJS",
+        "checkCommand": "node --version",
+        "validateCommand": "node --version",
+        "versionPattern": "^v18\\.",
+        "installCommand": "winget install OpenJS.NodeJS --accept-source-agreements --accept-package-agreements",
+        "alternativeInstall": "winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements",
+        "manualInstallUrl": "https://nodejs.org/en/download/"
+      },
+      "linux": {
+        "packageManager": "apt",
+        "packageName": "nodejs",
+        "checkCommand": "node --version",
+        "validateCommand": "node --version",
+        "versionPattern": "^v18\\.",
+        "installCommand": "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs",
+        "snapCommand": "sudo snap install node --classic",
+        "manualInstallUrl": "https://nodejs.org/en/download/"
+      },
+      "macos": {
+        "packageManager": "brew",
+        "packageName": "node",
+        "checkCommand": "node --version",
+        "validateCommand": "node --version",
+        "versionPattern": "^v18\\.",
+        "installCommand": "brew install node@18",
+        "manualInstallUrl": "https://nodejs.org/en/download/"
+      }
+    },
+    "npm": {
+      "name": "npm",
+      "description": "Node.js package manager (usually included with Node.js)",
+      "version": ">=9.0.0",
+      "required": true,
+      "category": "development",
+      "windows": {
+        "checkCommand": "npm --version",
+        "validateCommand": "npm --version",
+        "versionPattern": "^(9|[1-9][0-9])\\.",
+        "installCommand": "npm install -g npm@latest",
+        "notes": "Usually included with Node.js installation"
+      },
+      "linux": {
+        "checkCommand": "npm --version",
+        "validateCommand": "npm --version",
+        "versionPattern": "^(9|[1-9][0-9])\\.",
+        "installCommand": "sudo npm install -g npm@latest",
+        "notes": "Usually included with Node.js installation"
+      },
+      "macos": {
+        "checkCommand": "npm --version",
+        "validateCommand": "npm --version",
+        "versionPattern": "^(9|[1-9][0-9])\\.",
+        "installCommand": "sudo npm install -g npm@latest",
+        "notes": "Usually included with Node.js installation"
+      }
+    },
+    "git": {
+      "name": "Git",
+      "description": "Required for version control",
+      "version": ">=2.30.0",
+      "required": true,
+      "category": "development",
+      "windows": {
+        "packageManager": "winget",
+        "packageId": "Git.Git",
+        "checkCommand": "git --version",
+        "validateCommand": "git --version",
+        "versionPattern": "git version (2\\.[3-9][0-9]|[3-9][0-9])\\.",
+        "installCommand": "winget install Git.Git --accept-source-agreements --accept-package-agreements",
+        "manualInstallUrl": "https://git-scm.com/download/win"
+      },
+      "linux": {
+        "packageManager": "apt",
+        "packageName": "git",
+        "checkCommand": "git --version",
+        "validateCommand": "git --version",
+        "versionPattern": "git version (2\\.[3-9][0-9]|[3-9][0-9])\\.",
+        "installCommand": "sudo apt-get update && sudo apt-get install -y git",
+        "manualInstallUrl": "https://git-scm.com/download/linux"
+      },
+      "macos": {
+        "packageManager": "brew",
+        "packageName": "git",
+        "checkCommand": "git --version",
+        "validateCommand": "git --version",
+        "versionPattern": "git version (2\\.[3-9][0-9]|[3-9][0-9])\\.",
+        "installCommand": "brew install git",
+        "notes": "Often pre-installed on macOS"
+      }
+    },
+    "docker": {
+      "name": "Docker Desktop",
+      "description": "Required for container-based development (alternative to native setup)",
+      "version": ">=4.0.0",
+      "required": false,
+      "category": "optional",
+      "windows": {
+        "packageManager": "winget",
+        "packageId": "Docker.DockerDesktop",
+        "checkCommand": "docker --version",
+        "validateCommand": "docker info",
+        "installCommand": "winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements",
+        "manualInstallUrl": "https://www.docker.com/products/docker-desktop/",
+        "notes": "Requires Windows 10/11 Pro/Enterprise or Windows 10/11 Home with WSL 2"
+      },
+      "linux": {
+        "checkCommand": "docker --version",
+        "validateCommand": "docker info",
+        "installCommand": "sudo apt-get update && sudo apt-get install -y docker.io docker-compose",
+        "postInstallCommand": "sudo usermod -aG docker $USER && sudo systemctl enable docker && sudo systemctl start docker",
+        "notes": "Docker Engine instead of Docker Desktop on Linux"
+      },
+      "macos": {
+        "packageManager": "brew",
+        "packageManager": "cask",
+        "packageName": "docker",
+        "checkCommand": "docker --version",
+        "validateCommand": "docker info",
+        "installCommand": "brew install --cask docker",
+        "manualInstallUrl": "https://www.docker.com/products/docker-desktop/",
+        "notes": "Requires macOS 10.14 or newer"
+      }
+    },
+    "vscode": {
+      "name": "Visual Studio Code",
+      "description": "Recommended code editor",
+      "version": "latest",
+      "required": false,
+      "category": "optional",
+      "windows": {
+        "packageManager": "winget",
+        "packageId": "Microsoft.VisualStudioCode",
+        "checkCommand": "code --version",
+        "installCommand": "winget install Microsoft.VisualStudioCode --accept-source-agreements --accept-package-agreements",
+        "manualInstallUrl": "https://code.visualstudio.com/"
+      },
+      "linux": {
+        "packageManager": "snap",
+        "packageName": "code",
+        "checkCommand": "code --version",
+        "installCommand": "sudo snap install code --classic",
+        "debInstall": "wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg && sudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/ && sudo sh -c 'echo \"deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main\" > /etc/apt/sources.list.d/vscode.list' && sudo apt-get update && sudo apt-get install -y code",
+        "manualInstallUrl": "https://code.visualstudio.com/"
+      },
+      "macos": {
+        "packageManager": "brew",
+        "packageManager": "cask",
+        "packageName": "visual-studio-code",
+        "checkCommand": "code --version",
+        "installCommand": "brew install --cask visual-studio-code",
+        "manualInstallUrl": "https://code.visualstudio.com/"
+      }
+    },
+    "chrome": {
+      "name": "Google Chrome / Microsoft Edge",
+      "description": "Required for PDF generation",
+      "version": ">=90.0.0",
+      "required": true,
+      "category": "runtime",
+      "windows": {
+        "checkCommand": "reg query \"HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\BLBeacon\" /v version",
+        "alternativeCheck": "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version",
+        "installCommand": "winget install Microsoft.Edge --accept-source-agreements --accept-package-agreements",
+        "alternativeInstall": "winget install Google.Chrome --accept-source-agreements --accept-package-agreements",
+        "notes": "Microsoft Edge comes pre-installed on Windows 10/11"
+      },
+      "linux": {
+        "checkCommand": "google-chrome --version",
+        "alternativeCheck": "chromium-browser --version",
+        "installCommand": "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - && sudo sh -c 'echo \"deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main\" >> /etc/apt/sources.list.d/google-chrome.list' && sudo apt-get update && sudo apt-get install -y google-chrome-stable",
+        "alternativeInstall": "sudo apt-get install -y chromium-browser",
+        "notes": "Chromium is usually pre-installed on Ubuntu"
+      },
+      "macos": {
+        "checkCommand": "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --version",
+        "alternativeCheck": "/Applications/Microsoft\\ Edge.app/Contents/MacOS/Microsoft\\ Edge --version",
+        "packageManager": "brew",
+        "packageManager": "cask",
+        "packageName": "google-chrome",
+        "installCommand": "brew install --cask google-chrome",
+        "alternativeInstall": "brew install --cask microsoft-edge",
+        "notes": "Safari can also be used for PDF generation on macOS"
+      }
+    }
+  }
+}
