@@ -16,32 +16,32 @@ export default function GeneratePage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    loadTemplate();
-  }, [templateId]); // eslint-disable-line react-hooks/exhaustive-deps
+    const loadTemplate = async () => {
+      try {
+        const data = await templateService.getById(templateId);
+        setTemplate(data);
 
-  const loadTemplate = async () => {
-    try {
-      const data = await templateService.getById(templateId);
-      setTemplate(data);
+        // Extract variables from template
+        const variables = [...data.content.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
+        const uniqueVars = [...new Set(variables)];
 
-      // Extract variables from template
-      const variables = [...data.content.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
-      const uniqueVars = [...new Set(variables)];
-
-      if (uniqueVars.length > 0) {
-        const sampleData = {};
-        uniqueVars.forEach(v => {
-          sampleData[v] = '';
-        });
-        setJsonData(JSON.stringify(sampleData, null, 2));
+        if (uniqueVars.length > 0) {
+          const sampleData = {};
+          uniqueVars.forEach(v => {
+            sampleData[v] = '';
+          });
+          setJsonData(JSON.stringify(sampleData, null, 2));
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load template');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      setError('Failed to load template');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadTemplate();
+  }, [templateId]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
