@@ -21,6 +21,7 @@ export default function TemplatesPage() {
       const data = await templateService.getAll();
       setTemplates(data);
     } catch (err) {
+      console.error(err);
       setError('Failed to load templates');
     } finally {
       setLoading(false);

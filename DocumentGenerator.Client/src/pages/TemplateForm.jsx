@@ -21,7 +21,7 @@ export default function TemplateForm() {
         if (isEditing) {
             loadTemplate();
         }
-    }, [id]);
+    }, [id, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const loadTemplate = async () => {
         try {
@@ -129,7 +129,7 @@ export default function TemplateForm() {
                                 </div>
                             ) : (
                                 <TemplateEditor
-                                    initialContent={formData.content}
+                                    value={formData.content}
                                     onChange={(newContent) =>
                                         setFormData({ ...formData, content: newContent })
                                     }
