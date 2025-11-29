@@ -31,7 +31,21 @@ Good for invoices, reports, certificates - anything where the layout stays the s
 }
 ```
 
-**Result:** A formatted PDF invoice.
+```bash
+# 3. Call the API
+curl -X POST http://localhost:5257/api/documents/generate \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "templateId": "your-template-id",
+    "data": {
+      "invoiceNumber": "12345",
+      "total": "250.00"
+    }
+  }'
+```
+
+**Result:** A formatted PDF invoice in the response.
 
 ## What it looks like
 
@@ -127,10 +141,10 @@ Templates use Handlebars. If you've used Mustache, it's basically that.
 }
 ```
 
-```html
-<!-- Result in PDF -->
-<h1>Invoice #INV-2024-001</h1>
-<p>Customer: Acme Corp</p>
+**Result in PDF:**
+```
+Invoice #INV-2024-001
+Customer: Acme Corp
 ```
 
 **Loops**:
