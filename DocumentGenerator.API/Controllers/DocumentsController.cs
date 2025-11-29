@@ -3,6 +3,7 @@ using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using DocumentGenerator.API.Extensions;
 
 namespace DocumentGenerator.API.Controllers
 {
@@ -23,7 +24,7 @@ namespace DocumentGenerator.API.Controllers
         {
             try
             {
-                var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+                var userId = this.GetUserId();
                 var document = await _documentService.GenerateDocumentAsync(request, userId);
                 return Ok(document);
             }
@@ -40,14 +41,14 @@ namespace DocumentGenerator.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<DocumentDto>>> GetAll()
         {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            var userId = this.GetUserId();
             return Ok(await _documentService.GetAllAsync(userId));
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<DocumentDto>> GetById(Guid id)
         {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            var userId = this.GetUserId();
             var document = await _documentService.GetByIdAsync(id, userId);
             if (document == null) return NotFound();
             return Ok(document);
@@ -56,7 +57,7 @@ namespace DocumentGenerator.API.Controllers
         [HttpGet("{id}/download")]
         public async Task<IActionResult> Download(Guid id)
         {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            var userId = this.GetUserId();
             try
             {
                 var fileData = await _documentService.GetDocumentFileAsync(id, userId);

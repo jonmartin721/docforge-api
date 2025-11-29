@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { documentService } from '../services/documentService';
 import Navbar from '../components/Navbar';
 import Modal from '../components/Modal';
+import { formatDate } from '../utils/dateUtils';
 import './DocumentsPage.css';
 
 export default function DocumentsPage() {
@@ -68,15 +69,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Invalid Date';
-      return date.toLocaleDateString();
-    } catch {
-      return 'Invalid Date';
-    }
-  };
 
   if (loading) {
     return (

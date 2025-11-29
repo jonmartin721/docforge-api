@@ -3,6 +3,7 @@ using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using DocumentGenerator.API.Extensions;
 
 namespace DocumentGenerator.API.Controllers
 {
@@ -37,7 +38,7 @@ namespace DocumentGenerator.API.Controllers
         {
             try
             {
-                var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+                var userId = this.GetUserId();
                 var template = await _templateService.CreateAsync(createDto, userId);
                 return CreatedAtAction(nameof(GetById), new { id = template.Id }, template);
             }

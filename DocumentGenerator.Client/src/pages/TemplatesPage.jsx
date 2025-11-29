@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import TemplateEditor from '../components/TemplateEditor';
 import VisualBuilder from '../components/VisualBuilder';
 import Modal from '../components/Modal';
+import { formatDate } from '../utils/dateUtils';
 import './TemplatesPage.css';
 
 export default function TemplatesPage() {
@@ -68,15 +69,6 @@ export default function TemplatesPage() {
     }
   };
 
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Invalid Date';
-      return date.toLocaleDateString();
-    } catch {
-      return 'Invalid Date';
-    }
-  };
 
   if (loading) {
     return (

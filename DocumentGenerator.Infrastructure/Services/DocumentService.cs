@@ -116,10 +116,7 @@ namespace DocumentGenerator.Infrastructure.Services
             var document = await _context.Documents.FindAsync(id);
             if (document == null || document.UserId != userId) return false;
 
-            if (File.Exists(document.StoragePath))
-            {
-                File.Delete(document.StoragePath);
-            }
+            DeleteFileIfExists(document.StoragePath);
 
             _context.Documents.Remove(document);
             await _context.SaveChangesAsync();
@@ -134,21 +131,25 @@ namespace DocumentGenerator.Infrastructure.Services
 
             foreach (var doc in documents)
             {
-                if (File.Exists(doc.StoragePath))
-                {
-                    try
-                    {
-                        File.Delete(doc.StoragePath);
-                    }
-                    catch (Exception)
-                    {
-                        // Log error or ignore if file deletion fails
-                    }
-                }
+                DeleteFileIfExists(doc.StoragePath);
                 _context.Documents.Remove(doc);
             }
 
             await _context.SaveChangesAsync();
+        }
+        private void DeleteFileIfExists(string path)
+        {
+            if (File.Exists(path))
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (Exception)
+                {
+                    // Log error or ignore if file deletion fails
+                }
+            }
         }
     }
 }
