@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { templateService } from '../services/templateService';
 import Navbar from '../components/Navbar';
-import TemplateEditor from '../components/TemplateEditor';
-import VisualBuilder from '../components/VisualBuilder';
 import Modal from '../components/Modal';
 import { formatDate } from '../utils/dateUtils';
 import './TemplatesPage.css';
@@ -12,10 +10,6 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', content: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'code'
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, templateId: null });
 
   useEffect(() => {
@@ -33,20 +27,7 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await templateService.create(formData);
-      setFormData({ name: '', content: '' });
-      setShowForm(false);
-      await loadTemplates();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create template');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+
 
   const confirmDelete = (id) => {
     setDeleteModal({ isOpen: true, templateId: id });
@@ -92,80 +73,17 @@ export default function TemplatesPage() {
             <h1 className="mb-sm">Templates</h1>
             <p className="text-muted mb-0">Manage your document templates</p>
           </div>
-          <button
+          <Link
+            to="/templates/new"
             className="btn btn-primary"
-            onClick={() => setShowForm(!showForm)}
           >
-            {showForm ? 'Cancel' : '+ New Template'}
-          </button>
+            + New Template
+          </Link>
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
 
-        {showForm && (
-          <div className="card mb-lg">
-            <h3 className="mb-md">Create New Template</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="name">Template Name</label>
-                <input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                  placeholder="Invoice Template"
-                />
-              </div>
-              <div className="form-group">
-                <div className="flex-between mb-sm">
-                  <label className="mb-0">Template Content</label>
-                  <div className="btn-group">
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${editorMode === 'visual' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => setEditorMode('visual')}
-                    >
-                      Visual Builder
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${editorMode === 'code' ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => setEditorMode('code')}
-                    >
-                      Code Editor
-                    </button>
-                  </div>
-                </div>
 
-                {editorMode === 'visual' ? (
-                  <VisualBuilder
-                    initialContent={formData.content}
-                    onChange={(newContent) =>
-                      setFormData({ ...formData, content: newContent })
-                    }
-                  />
-                ) : (
-                  <TemplateEditor
-                    initialContent={formData.content}
-                    onChange={(newContent) =>
-                      setFormData({ ...formData, content: newContent })
-                    }
-                  />
-                )}
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={submitting}
-              >
-                {submitting ? 'Creating...' : 'Create Template'}
-              </button>
-            </form>
-          </div>
-        )}
 
         <div className="templates-grid">
           {templates.length === 0 ? (
@@ -198,6 +116,12 @@ export default function TemplatesPage() {
                     className="btn btn-primary btn-sm"
                   >
                     Generate Doc
+                  </Link>
+                  <Link
+                    to={`/templates/${template.id}/edit`}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    Edit
                   </Link>
                   <button
                     onClick={() => confirmDelete(template.id)}
