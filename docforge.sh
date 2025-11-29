@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # docforge.sh - CLI for DocForge API
-# Usage: ./docforge.sh
+# Usage: ./docforge.sh [options]
+
+set -euo pipefail
 
 # Colors and Formatting
 RED='\033[0;31m'
@@ -17,13 +19,143 @@ API_PORT=5257
 CLIENT_PORT=5173
 API_DIR="./DocumentGenerator.API"
 CLIENT_DIR="./DocumentGenerator.Client"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Global variables
+SKIP_DEPENDENCY_CHECK=${SKIP_DEPENDENCY_CHECK:-0}
+AUTO_FIX_DEPENDENCIES=${AUTO_FIX_DEPENDENCIES:-0}
+DEPENDENCY_STATUS=0
 
 # Helper Functions
 check_port() {
-    if lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null ; then
-        echo -e "${GREEN}🟢 UP${NC}"
+    if lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+        echo -e "${GREEN}UP${NC}"
     else
-        echo -e "${RED}🔴 DOWN${NC}"
+        echo -e "${RED}DOWN${NC}"
+    fi
+}
+
+test_quick_dependency() {
+    local cmd="$1"
+    if command -v "$cmd" >/dev/null 2>&1; then
+        if eval "$cmd" >/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+show_dependency_status() {
+    if [[ "$DEPENDENCY_STATUS" -eq 0 ]]; then
+        echo -e "🔍 Dependencies: ${GREEN}OK${NC}"
+    else
+        echo -e "🔍 Dependencies: ${RED}ISSUES${NC}"
+    fi
+}
+
+proactive_dependency_check() {
+    if [[ "$SKIP_DEPENDENCY_CHECK" -eq 1 ]]; then
+        return 0
+    fi
+
+    echo -e "${CYAN}🔍 Checking dependencies...${NC}"
+    local issues=()
+
+    # Quick dependency checks
+    if ! test_quick_dependency "dotnet --version"; then
+        issues+=(".NET 8 SDK not found")
+    fi
+
+    if ! test_quick_dependency "node --version"; then
+        issues+=("Node.js not found")
+    fi
+
+    if ! test_quick_dependency "npm --version"; then
+        issues+=("npm not found")
+    fi
+
+    if [[ ${#issues[@]} -gt 0 ]]; then
+        echo
+        echo -e "${YELLOW}⚠️  Found dependency issues:${NC}"
+        for issue in "${issues[@]}"; do
+            echo -e "   • ${RED}$issue${NC}"
+        done
+
+        if [[ "$AUTO_FIX_DEPENDENCIES" -eq 1 ]]; then
+            echo
+            echo -e "${CYAN}🔧 Attempting to fix dependencies automatically...${NC}"
+
+            local dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+            if [[ -f "$dependency_checker" ]]; then
+                if "$dependency_checker" --auto-install --quiet; then
+                    echo -e "${GREEN}✅ Dependencies fixed!${NC}"
+                    DEPENDENCY_STATUS=0
+                    return 0
+                else
+                    echo -e "${YELLOW}⚠️  Some dependencies could not be fixed automatically${NC}"
+                fi
+            else
+                echo -e "${RED}❌ Dependency checker not found${NC}"
+            fi
+        fi
+
+        echo
+        echo -e "${CYAN}🔧 Options:${NC}"
+        echo "   1) Run automatic fix (./docforge.sh --autofix)"
+        echo "   2) Run full dependency check"
+        echo "   3) Continue anyway (may fail)"
+        echo
+
+        while true; do
+            read -p "Select option (1-3, or skip with --skip-dependency-check): " choice
+            case "$choice" in
+                1|2|3) break ;;
+                *) echo "Please enter 1, 2, or 3" ;;
+            esac
+        done
+
+        case "$choice" in
+            1)
+                local dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+                if [[ -f "$dependency_checker" ]]; then
+                    if "$dependency_checker" --auto-install; then
+                        echo -e "${GREEN}✅ Dependencies installed successfully!${NC}"
+                        DEPENDENCY_STATUS=0
+                        return 0
+                    else
+                        echo -e "${RED}❌ Some dependencies failed to install${NC}"
+                        DEPENDENCY_STATUS=1
+                        return 1
+                    fi
+                else
+                    echo -e "${RED}❌ Dependency checker not found${NC}"
+                    DEPENDENCY_STATUS=1
+                    return 1
+                fi
+                ;;
+            2)
+                local dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+                if [[ -f "$dependency_checker" ]]; then
+                    "$dependency_checker"
+                    local exit_code=$?
+                    DEPENDENCY_STATUS=$((exit_code == 0 ? 0 : 1))
+                    return $exit_code
+                else
+                    echo -e "${RED}❌ Dependency checker not found${NC}"
+                    DEPENDENCY_STATUS=1
+                    return 1
+                fi
+                ;;
+            3)
+                echo -e "${YELLOW}⚠️  Continuing with potential issues...${NC}"
+                DEPENDENCY_STATUS=1
+                return 0
+                ;;
+        esac
+    else
+        echo -e "${GREEN}✅ All dependencies appear to be installed${NC}"
+        DEPENDENCY_STATUS=0
+        return 0
     fi
 }
 
@@ -33,6 +165,7 @@ print_header() {
     echo "   DOCFORGE"
     echo -e "${NC}"
     echo "==============================================="
+    show_dependency_status
     echo -e " Backend (API):    $(check_port $API_PORT) (Port $API_PORT)"
     echo -e " Frontend (Client): $(check_port $CLIENT_PORT) (Port $CLIENT_PORT)"
     echo "==============================================="
@@ -46,67 +179,235 @@ wait_for_enter() {
 
 # Actions
 do_setup() {
-    echo -e "${YELLOW}Running Setup...${NC}"
+    echo -e "${CYAN}🔧 Setup Options:${NC}"
     echo ""
-    echo -e "${CYAN}Note: The Linux setup script requires sudo to install system dependencies.${NC}"
-    echo -e "${CYAN}Please run it separately before using this TUI:${NC}"
-    echo -e "${CYAN}  sudo ./scripts/setup-linux.sh${NC}"
+    echo -e "1) 🐳 Docker Setup (Easiest)" "${GREEN}"
+    echo -e "2) 🔧 Native Setup (Full development)" "${YELLOW}"
+    echo -e "3) 🔍 Check Dependencies Only" "${CYAN}"
+    echo -e "4) 📦 Install Dependencies Automatically" "${NC}"
     echo ""
 
-    echo "1. Restoring Backend..."
-    dotnet restore
+    while true; do
+        read -p "Select setup option (1-4): " choice
+        case "$choice" in
+            1|2|3|4) break ;;
+            *) echo "Please enter 1, 2, 3, or 4" ;;
+        esac
+    done
 
-    echo "2. Installing Frontend Dependencies..."
-    cd "$CLIENT_DIR" && npm install
-    cd ..
+    case "$choice" in
+        1)
+            local setup_wizard="$SCRIPT_DIR/scripts/setup-wizard.sh"
+            if [[ -f "$setup_wizard" ]]; then
+                "$setup_wizard" --force-native
+            else
+                echo -e "${RED}❌ Setup wizard not found${NC}"
+                echo -e "${YELLOW}   Falling back to native setup...${NC}"
+                do_native_setup
+            fi
+            ;;
+        2)
+            do_native_setup
+            ;;
+        3)
+            local dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+            if [[ -f "$dependency_checker" ]]; then
+                "$dependency_checker"
+            else
+                echo -e "${RED}❌ Dependency checker not found${NC}"
+            fi
+            ;;
+        4)
+            local dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+            if [[ -f "$dependency_checker" ]]; then
+                if "$dependency_checker" --auto-install; then
+                    echo -e "${GREEN}✅ Dependencies installed successfully!${NC}"
+                else
+                    echo -e "${RED}❌ Some dependencies failed to install${NC}"
+                fi
+            else
+                echo -e "${RED}❌ Dependency checker not found${NC}"
+            fi
+            ;;
+    esac
 
-    echo -e "${GREEN}Setup Complete!${NC}"
     wait_for_enter
 }
 
-do_start_backend() {
-    echo -e "${YELLOW}Starting Backend...${NC}"
-    echo "Starting API in background..."
-    dotnet run --project "$API_DIR" > api.log 2>&1 &
-    API_PID=$!
-    echo "API started with PID $API_PID. Logs: api.log"
-    
-    # Wait for API to be ready (with timeout)
-    echo "Waiting for API to be ready..."
-    for i in {1..15}; do
-        if lsof -Pi :$API_PORT -sTCP:LISTEN -t > /dev/null 2>&1; then
-            echo -e "${GREEN}✓ API is up and running!${NC}"
-            wait_for_enter
-            return
+do_native_setup() {
+    echo -e "${YELLOW}🔧 Setting up native development environment...${NC}"
+
+    # Check and install dependencies
+    local dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+    if [[ -f "$dependency_checker" ]]; then
+        echo -e "${CYAN}📦 Checking and installing dependencies...${NC}"
+        if "$dependency_checker" --auto-install; then
+            echo -e "${GREEN}✅ Dependencies installed successfully!${NC}"
+
+            # Restore .NET packages
+            echo -e "${CYAN}📦 Restoring .NET packages...${NC}"
+            if dotnet restore; then
+                echo -e "${GREEN}✅ .NET packages restored${NC}"
+            else
+                echo -e "${YELLOW}⚠️  .NET package restore had issues${NC}"
+            fi
+
+            # Install npm dependencies
+            echo -e "${CYAN}📦 Installing frontend dependencies...${NC}"
+            if [[ -f "$CLIENT_DIR/package.json" ]]; then
+                if (cd "$CLIENT_DIR" && npm install); then
+                    echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  Frontend dependency installation had issues${NC}"
+                fi
+            else
+                echo -e "${YELLOW}⚠️  Frontend package.json not found${NC}"
+            fi
+
+            echo
+            echo -e "${GREEN}🎉 Native setup completed!${NC}"
+            echo -e "${CYAN}You can now start the backend and frontend services.${NC}"
+        else
+            echo -e "${RED}❌ Dependency installation failed${NC}"
+            echo -e "${YELLOW}Please check the error messages above and try again.${NC}"
         fi
-        sleep 1
-    done
-    
-    echo -e "${RED}⚠ API may not have started. Check api.log for errors.${NC}"
+    else
+        echo -e "${RED}❌ Dependency checker not found${NC}"
+        echo -e "${YELLOW}Please run the setup wizard instead: ./scripts/setup-wizard.sh${NC}"
+    fi
+}
+
+do_start_backend() {
+    # Pre-flight checks
+    if [[ ! -d "$API_DIR" ]]; then
+        echo -e "${RED}❌ API directory not found: $API_DIR${NC}"
+        echo -e "${YELLOW}   Make sure you're running this from the project root.${NC}"
+        wait_for_enter
+        return
+    fi
+
+    if ! test_quick_dependency "dotnet --version"; then
+        echo -e "${RED}❌ .NET SDK not found. Please run setup first.${NC}"
+        echo -e "${YELLOW}   Option 1) Setup Dependencies${NC}"
+        wait_for_enter
+        return
+    fi
+
+    echo -e "${YELLOW}🚀 Starting Backend...${NC}"
+
+    if dotnet run --project "$API_DIR" > api.log 2>&1 & then
+        API_PID=$!
+        echo -e "${GREEN}✓ Backend process started (PID: $API_PID)${NC}"
+
+        # Wait for API to be ready (with timeout)
+        echo -e "${CYAN}⏳ Waiting for API to be ready...${NC}"
+        for i in {1..30}; do  # Increased timeout to 30 seconds
+            if lsof -Pi :$API_PORT -sTCP:LISTEN -t > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ API is up and running on port $API_PORT!${NC}"
+                echo -e "${CYAN}   API URL: http://localhost:$API_PORT${NC}"
+                echo -e "${CYAN}   Swagger UI: http://localhost:$API_PORT/swagger${NC}"
+                wait_for_enter
+                return
+            fi
+
+            # Show progress
+            if [[ $((i % 5)) -eq 0 ]]; then
+                echo -e "${CYAN}   Still waiting... ($i/30 seconds)${NC}"
+            fi
+            sleep 1
+        done
+
+        echo -e "${YELLOW}⚠️  WARNING: API may not have started within expected time.${NC}"
+        echo -e "${YELLOW}   Check api.log for errors and consider:${NC}"
+        echo -e "   • Running 'dotnet restore' first${NC}"
+        echo -e "   • Checking for missing dependencies${NC}"
+        echo -e "   • Looking for build errors${NC}"
+    else
+        echo -e "${RED}❌ Failed to start backend process${NC}"
+        echo -e "${YELLOW}   • Make sure .NET 8 SDK is installed${NC}"
+        echo -e "${YELLOW}   • Check that the API project exists and can build${NC}"
+    fi
+
     wait_for_enter
 }
 
 do_start_frontend() {
-    echo -e "${YELLOW}Starting Frontend...${NC}"
-    echo "Starting Vite in background..."
-    cd "$CLIENT_DIR"
-    npm run dev > ../client.log 2>&1 &
-    CLIENT_PID=$!
-    cd ..
-    echo "Client started with PID $CLIENT_PID. Logs: client.log"
-    
-    # Wait for Vite to be ready (with timeout)
-    echo "Waiting for Vite to be ready..."
-    for i in {1..15}; do
-        if lsof -Pi :$CLIENT_PORT -sTCP:LISTEN -t > /dev/null 2>&1; then
-            echo -e "${GREEN}✓ Frontend is up and running!${NC}"
+    # Pre-flight checks
+    if [[ ! -d "$CLIENT_DIR" ]]; then
+        echo -e "${RED}❌ Client directory not found: $CLIENT_DIR${NC}"
+        echo -e "${YELLOW}   Make sure you're running this from the project root.${NC}"
+        wait_for_enter
+        return
+    fi
+
+    if [[ ! -f "$CLIENT_DIR/package.json" ]]; then
+        echo -e "${RED}❌ package.json not found in client directory${NC}"
+        echo -e "${YELLOW}   Make sure the frontend project is properly set up.${NC}"
+        wait_for_enter
+        return
+    fi
+
+    if ! test_quick_dependency "node --version"; then
+        echo -e "${RED}❌ Node.js not found. Please run setup first.${NC}"
+        echo -e "${YELLOW}   Option 1) Setup Dependencies${NC}"
+        wait_for_enter
+        return
+    fi
+
+    if ! test_quick_dependency "npm --version"; then
+        echo -e "${RED}❌ npm not found. Please run setup first.${NC}"
+        echo -e "${YELLOW}   Option 1) Setup Dependencies${NC}"
+        wait_for_enter
+        return
+    fi
+
+    # Check if node_modules exists
+    if [[ ! -d "$CLIENT_DIR/node_modules" ]]; then
+        echo -e "${YELLOW}⚠️  node_modules not found. Running npm install first...${NC}"
+        if (cd "$CLIENT_DIR" && npm install); then
+            echo -e "${GREEN}✅ Dependencies installed${NC}"
+        else
+            echo -e "${RED}❌ Failed to install dependencies${NC}"
             wait_for_enter
             return
         fi
-        sleep 1
-    done
-    
-    echo -e "${RED}⚠ Frontend may not have started. Check client.log for errors.${NC}"
+    fi
+
+    echo -e "${YELLOW}🚀 Starting Frontend...${NC}"
+
+    if (cd "$CLIENT_DIR" && npm run dev > ../client.log 2>&1 &); then
+        CLIENT_PID=$!
+        echo -e "${GREEN}✓ Frontend process started (PID: $CLIENT_PID)${NC}"
+
+        # Wait for Vite to be ready (with timeout)
+        echo -e "${CYAN}⏳ Waiting for Vite to be ready...${NC}"
+        for i in {1..30}; do  # Increased timeout to 30 seconds
+            if lsof -Pi :$CLIENT_PORT -sTCP:LISTEN -t > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Frontend is up and running on port $CLIENT_PORT!${NC}"
+                echo -e "${CYAN}   Frontend URL: http://localhost:$CLIENT_PORT${NC}"
+                wait_for_enter
+                return
+            fi
+
+            # Show progress
+            if [[ $((i % 5)) -eq 0 ]]; then
+                echo -e "${CYAN}   Still waiting... ($i/30 seconds)${NC}"
+            fi
+            sleep 1
+        done
+
+        echo -e "${YELLOW}⚠️  WARNING: Frontend may not have started within expected time.${NC}"
+        echo -e "${YELLOW}   Check client.log for errors and consider:${NC}"
+        echo -e "   • Running 'npm install' first${NC}"
+        echo -e "   • Checking for missing Node.js dependencies${NC}"
+        echo -e "   • Looking for build errors${NC}"
+    else
+        echo -e "${RED}❌ Failed to start frontend process${NC}"
+        echo -e "${YELLOW}   • Make sure Node.js and npm are installed${NC}"
+        echo -e "${YELLOW}   • Check that package.json exists and is valid${NC}"
+        echo -e "${YELLOW}   • Try running 'npm install' in the client directory${NC}"
+    fi
+
     wait_for_enter
 }
 
@@ -189,6 +490,35 @@ do_clear_data() {
     wait_for_enter
 }
 
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --skip-dependency-check)
+            export SKIP_DEPENDENCY_CHECK=1
+            shift
+            ;;
+        --autofix)
+            export AUTO_FIX_DEPENDENCIES=1
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [options]"
+            echo "Options:"
+            echo "  --skip-dependency-check    Skip dependency checks"
+            echo "  --autofix                 Auto-fix dependency issues"
+            echo "  -h, --help               Show this help"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Unknown option: $1${NC}"
+            exit 1
+            ;;
+    esac
+done
+
+# Run proactive dependency check on startup
+proactive_dependency_check
+
 # Main Loop
 while true; do
     print_header
@@ -196,7 +526,7 @@ while true; do
     echo "  1) 🔧 Setup Dependencies"
     echo "  2) 🚀 Start Backend"
     echo "  3) 🌐 Start Frontend"
-    echo "  4) ⚡ Start Both"
+    echo "  4) ⚡ Start Both Services"
     echo "  5) 🛑 Stop All Services"
     echo ""
     echo -e "${BOLD}Tools:${NC}"
@@ -206,24 +536,67 @@ while true; do
     echo "  9) 🧪 Run Tests"
     echo ""
     echo "  r) 🔄 Refresh Status"
-    echo "  c) 🗑️ Clear All Data"
-    echo "  q) Quit"
+    echo "  c) 🗑️  Clear All Data"
+    echo "  d) 🔍 Dependencies Status"
+    echo "  q) 👋 Quit"
     echo ""
     read -p "Select an option: " option
 
     case $option in
-        1) do_setup ;;
-        2) do_start_backend ;;
-        3) do_start_frontend ;;
-        4) do_start_backend; do_start_frontend ;;
-        5) do_stop_all ;;
-        6) do_view_logs "api.log" "Backend" ;;
-        7) do_view_logs "client.log" "Frontend" ;;
-        8) do_open_browser ;;
-        9) do_test ;;
-        r) ;; # Just loop to refresh
-        c) do_clear_data ;;
-        q) exit 0 ;;
-        *) echo -e "${RED}Invalid option${NC}"; sleep 1 ;;
+        1)
+            do_setup
+            # Re-check dependencies after setup
+            proactive_dependency_check
+            ;;
+        2)
+            do_start_backend
+            ;;
+        3)
+            do_start_frontend
+            ;;
+        4)
+            do_start_backend
+            do_start_frontend
+            ;;
+        5)
+            do_stop_all
+            ;;
+        6)
+            do_view_logs "api.log" "Backend"
+            ;;
+        7)
+            do_view_logs "client.log" "Frontend"
+            ;;
+        8)
+            do_open_browser
+            ;;
+        9)
+            do_test
+            ;;
+        r)
+            # Just loop to refresh
+            ;;
+        c)
+            do_clear_data
+            ;;
+        d)
+            dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
+            if [[ -f "$dependency_checker" ]]; then
+                "$dependency_checker"
+                exit_code=$?
+                DEPENDENCY_STATUS=$((exit_code == 0 ? 0 : 1))
+            else
+                echo -e "${RED}❌ Dependency checker not found${NC}"
+                wait_for_enter
+            fi
+            ;;
+        q)
+            echo -e "${GREEN}👋 Goodbye!${NC}"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}❌ Invalid option. Please select 1-9, r, c, d, or q.${NC}"
+            sleep 1
+            ;;
     esac
 done
