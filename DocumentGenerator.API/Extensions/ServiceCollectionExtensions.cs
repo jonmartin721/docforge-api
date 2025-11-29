@@ -40,9 +40,14 @@ namespace DocumentGenerator.API.Extensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtSettings?.Issuer,
                     ValidAudience = jwtSettings?.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Secret ?? "DEFAULT_SECRET_KEY_MUST_BE_LONG_ENOUGH"))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Secret ?? throw new InvalidOperationException("JWT Secret is missing")))
                 };
             });
+
+            if (string.IsNullOrEmpty(jwtSettings?.Secret) || jwtSettings.Secret.Length < 32)
+            {
+                throw new InvalidOperationException("JWT Secret must be at least 32 characters long.");
+            }
 
             // Services
             services.AddScoped<IAuthService, AuthService>();
