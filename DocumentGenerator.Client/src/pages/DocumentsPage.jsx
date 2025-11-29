@@ -21,6 +21,7 @@ export default function DocumentsPage() {
       setDocuments(data);
     } catch (err) {
       console.error(err);
+      // TODO: Integrate a dedicated error tracking service (e.g., Sentry) for production
       setError('Failed to load documents');
     } finally {
       setLoading(false);
