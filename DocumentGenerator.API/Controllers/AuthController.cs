@@ -1,3 +1,4 @@
+using DocumentGenerator.API.Middleware;
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -16,31 +17,21 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpPost("register")]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto registerDto)
         {
-            try
-            {
-                var result = await _authService.RegisterAsync(registerDto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _authService.RegisterAsync(registerDto);
+            return Ok(result);
         }
 
         [HttpPost("login")]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<AuthResponseDto>> Login(LoginDto loginDto)
         {
-            try
-            {
-                var result = await _authService.LoginAsync(loginDto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
+            var result = await _authService.LoginAsync(loginDto);
+            return Ok(result);
         }
     }
 }

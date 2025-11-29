@@ -4,6 +4,7 @@ using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DocumentGenerator.API.Extensions;
+using DocumentGenerator.API.Middleware;
 
 namespace DocumentGenerator.API.Controllers
 {
@@ -20,25 +21,18 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpPost("generate")]
+        [ProducesResponseType(typeof(DocumentDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<DocumentDto>> Generate(GenerationRequestDto request)
         {
-            try
-            {
-                var userId = this.GetUserId();
-                var document = await _documentService.GenerateDocumentAsync(request, userId);
-                return Ok(document);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = this.GetUserId();
+            var document = await _documentService.GenerateDocumentAsync(request, userId);
+            return Ok(document);
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<DocumentDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<DocumentDto>>> GetAll()
         {
             var userId = this.GetUserId();
@@ -46,6 +40,8 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(DocumentDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<DocumentDto>> GetById(Guid id)
         {
             var userId = this.GetUserId();
@@ -55,23 +51,20 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpGet("{id}/download")]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Download(Guid id)
         {
             var userId = this.GetUserId();
-            try
-            {
-                var fileData = await _documentService.GetDocumentFileAsync(id, userId);
-                if (fileData == null) return NotFound();
+            var fileData = await _documentService.GetDocumentFileAsync(id, userId);
+            if (fileData == null) return NotFound();
 
-                return File(fileData.Value.FileData, "application/pdf", fileData.Value.FileName);
-            }
-            catch (FileNotFoundException)
-            {
-                return NotFound(new { message = "File not found on server" });
-            }
+            return File(fileData.Value.FileData, "application/pdf", fileData.Value.FileName);
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> Delete(Guid id)
         {
             var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
