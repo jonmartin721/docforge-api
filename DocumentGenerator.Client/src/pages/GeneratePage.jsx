@@ -31,6 +31,8 @@ export default function GeneratePage() {
             sampleData[v] = '';
           });
           setJsonData(JSON.stringify(sampleData, null, 2));
+        } else {
+          setJsonData('{\n  \n}');
         }
       } catch (err) {
         console.error(err);
@@ -40,7 +42,10 @@ export default function GeneratePage() {
       }
     };
 
-    loadTemplate();
+    if (templateId) {
+      setLoading(true);
+      loadTemplate();
+    }
   }, [templateId]);
 
   const handleGenerate = async (e) => {
