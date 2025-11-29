@@ -63,7 +63,7 @@ namespace DocumentGenerator.Infrastructure.Services
             var dto = _mapper.Map<DocumentDto>(document);
             dto.TemplateName = template.Name;
             dto.DownloadUrl = $"/api/documents/{document.Id}/download";
-            
+
             return dto;
         }
 

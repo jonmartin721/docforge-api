@@ -51,7 +51,7 @@ namespace DocumentGenerator.Tests.Unit
             // Assert
             result.Should().NotBeNull();
             result.Name.Should().Be("Invoice");
-            
+
             var template = await _context.Templates.FindAsync(result.Id);
             template.Should().NotBeNull();
             template!.Content.Should().Be("<h1>{{title}}</h1>");

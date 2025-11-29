@@ -7,7 +7,7 @@ namespace DocumentGenerator.Core.DTOs
     {
         [Required]
         public Guid TemplateId { get; set; }
-        
+
         [Required]
         public object Data { get; set; } = new object();
     }

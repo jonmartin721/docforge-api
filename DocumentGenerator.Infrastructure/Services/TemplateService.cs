@@ -76,7 +76,7 @@ namespace DocumentGenerator.Infrastructure.Services
 
             if (!string.IsNullOrEmpty(updateDto.Name)) template.Name = updateDto.Name;
             if (!string.IsNullOrEmpty(updateDto.Description)) template.Description = updateDto.Description;
-            
+
             template.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
