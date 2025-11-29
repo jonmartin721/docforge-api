@@ -1,0 +1,255 @@
+{
+  "platforms": {
+    "windows": {
+      "name": "Windows",
+      "packageManagers": {
+        "winget": {
+          "name": "Windows Package Manager",
+          "checkCommand": "winget --version",
+          "installUrl": "https://docs.microsoft.com/en-us/windows/package-manager/winget/",
+          "notes": "Built into Windows 10/11, can be installed from Microsoft Store"
+        },
+        "choco": {
+          "name": "Chocolatey",
+          "checkCommand": "choco --version",
+          "installCommand": "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))",
+          "installUrl": "https://chocolatey.org/install",
+          "notes": "Alternative package manager for Windows"
+        }
+      },
+      "shell": "powershell",
+      "shellCheckCommand": "Get-Command powershell -ErrorAction SilentlyContinue",
+      "setupScript": "setup-windows.ps1",
+      "cliScript": "docforge.ps1",
+      "dependencies": [
+        "dotnet-8",
+        "nodejs",
+        "git",
+        "chrome"
+      ],
+      "optionalDependencies": [
+        "docker",
+        "vscode"
+      ],
+      "installSequence": [
+        "git",
+        "dotnet-8",
+        "nodejs",
+        "chrome",
+        "vscode",
+        "docker"
+      ]
+    },
+    "linux": {
+      "name": "Linux",
+      "packageManagers": {
+        "apt": {
+          "name": "APT (Advanced Package Tool)",
+          "checkCommand": "apt --version",
+          "supportedDistributions": ["ubuntu", "debian", "mint"],
+          "installCommand": "sudo apt-get update",
+          "notes": "Default package manager for Debian-based distributions"
+        },
+        "yum": {
+          "name": "YUM (Yellowdog Updater Modified)",
+          "checkCommand": "yum --version",
+          "supportedDistributions": ["centos", "rhel", "fedora"],
+          "installCommand": "sudo yum check-update",
+          "notes": "Default package manager for RHEL/CentOS systems"
+        },
+        "dnf": {
+          "name": "DNF (Dandified YUM)",
+          "checkCommand": "dnf --version",
+          "supportedDistributions": ["fedora"],
+          "installCommand": "sudo dnf check-update",
+          "notes": "Modern package manager for Fedora"
+        },
+        "snap": {
+          "name": "Snap",
+          "checkCommand": "snap --version",
+          "installCommand": "sudo apt-get install -y snapd",
+          "notes": "Universal package manager available on most distributions"
+        },
+        "pacman": {
+          "name": "PACMAN",
+          "checkCommand": "pacman --version",
+          "supportedDistributions": ["arch"],
+          "installCommand": "sudo pacman -Sy",
+          "notes": "Package manager for Arch Linux"
+        }
+      },
+      "shell": "bash",
+      "shellCheckCommand": "which bash",
+      "setupScript": "setup-linux.sh",
+      "cliScript": "docforge.sh",
+      "dependencies": [
+        "git",
+        "dotnet-8",
+        "nodejs",
+        "chrome"
+      ],
+      "optionalDependencies": [
+        "docker",
+        "vscode"
+      ],
+      "installSequence": [
+        "git",
+        "chrome",
+        "dotnet-8",
+        "nodejs",
+        "vscode",
+        "docker"
+      ],
+      "postInstallCommands": [
+        "sudo systemctl daemon-reload",
+        "sudo systemctl enable docker"
+      ]
+    },
+    "macos": {
+      "name": "macOS",
+      "packageManagers": {
+        "brew": {
+          "name": "Homebrew",
+          "checkCommand": "brew --version",
+          "installCommand": "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+          "installUrl": "https://brew.sh/",
+          "notes": "The most popular package manager for macOS"
+        }
+      },
+      "shell": "bash",
+      "shellCheckCommand": "which bash",
+      "setupScript": "setup-macos.sh",
+      "cliScript": "docforge.sh",
+      "dependencies": [
+        "git",
+        "dotnet-8",
+        "nodejs",
+        "chrome"
+      ],
+      "optionalDependencies": [
+        "docker",
+        "vscode"
+      ],
+      "installSequence": [
+        "git",
+        "chrome",
+        "dotnet-8",
+        "nodejs",
+        "vscode",
+        "docker"
+      ]
+    }
+  },
+  "fallbackOptions": {
+    "docker": {
+      "name": "Docker Setup",
+      "description": "Use Docker containers to avoid local dependency installation",
+      "requirements": [
+        "docker"
+      ],
+      "commands": [
+        "docker-compose build",
+        "docker-compose up -d"
+      ],
+      "ports": {
+        "api": 5000,
+        "frontend": 5173
+      },
+      "advantages": [
+        "No local dependencies required",
+        "Isolated environment",
+        "Consistent across platforms",
+        "Easy to start over"
+      ],
+      "disadvantages": [
+        "Requires Docker installation",
+        "Slower initial startup",
+        "Limited debugging capabilities",
+        "Requires more disk space"
+      ]
+    },
+    "gitpod": {
+      "name": "Gitpod",
+      "description": "Cloud-based development environment",
+      "requirements": [
+        "web browser",
+        "github account"
+      ],
+      "commands": [
+        "Open project in Gitpod",
+        "Wait for environment to setup"
+      ],
+      "advantages": [
+        "Zero local setup",
+        "Pre-configured environment",
+        "Free for open source",
+        "Works from any device"
+      ],
+      "disadvantages": [
+        "Requires internet connection",
+        "Limited resources",
+        "Not suitable for sensitive data"
+      ]
+    },
+    "codespaces": {
+      "name": "GitHub Codespaces",
+      "description": "Cloud-based development environment from GitHub",
+      "requirements": [
+        "web browser",
+        "github account",
+        "github subscription (for paid tiers)"
+      ],
+      "commands": [
+        "Open project in Codespaces",
+        "Wait for environment to setup"
+      ],
+      "advantages": [
+        "Zero local setup",
+        "Integrated with GitHub",
+        "Pre-configured environment",
+        "Works from any device"
+      ],
+      "disadvantages": [
+        "Requires GitHub account",
+        "Paid service for extended use",
+        "Requires internet connection"
+      ]
+    }
+  },
+  "errorRecovery": {
+    "commonErrors": {
+      "permission_denied": {
+        "message": "Permission denied during installation",
+        "solutions": [
+          "Run script with administrator privileges",
+          "Use sudo on Linux/macOS",
+          "Run PowerShell as Administrator on Windows"
+        ]
+      },
+      "network_error": {
+        "message": "Network connection failed",
+        "solutions": [
+          "Check internet connection",
+          "Try using VPN if behind firewall",
+          "Use offline installation packages if available"
+        ]
+      },
+      "package_manager_not_found": {
+        "message": "Package manager not available",
+        "solutions": [
+          "Install package manager first",
+          "Use alternative installation method",
+          "Download and install manually from official website"
+        ]
+      },
+      "version_conflict": {
+        "message": "Version conflicts with existing software",
+        "solutions": [
+          "Unconflict existing version",
+          "Use containerization (Docker)",
+          "Use version managers (nvm for Node.js, dotnet-svm for .NET)"
+        ]
+      }
+    }
+  }
+}
