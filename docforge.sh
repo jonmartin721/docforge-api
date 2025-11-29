@@ -11,6 +11,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+GRAY='\033[0;90m'
+WHITE='\033[1;37m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
@@ -27,8 +29,30 @@ AUTO_FIX_DEPENDENCIES=${AUTO_FIX_DEPENDENCIES:-0}
 DEPENDENCY_STATUS=0
 
 # Helper Functions
+# Check if a port is listening (returns 0 if yes, 1 if no)
+is_port_listening() {
+    local port=$1
+
+    # Try lsof first (most common)
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1 && return 0
+    fi
+    # Try ss (modern Linux)
+    if command -v ss >/dev/null 2>&1; then
+        ss -tlnp 2>/dev/null | grep -q ":$port " && return 0
+    fi
+    # Try netstat (fallback)
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -tlnp 2>/dev/null | grep -q ":$port " && return 0
+    fi
+
+    return 1
+}
+
 check_port() {
-    if lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    local port=$1
+
+    if is_port_listening $port; then
         echo -e "${GREEN}UP${NC}"
     else
         echo -e "${RED}DOWN${NC}"
@@ -37,7 +61,10 @@ check_port() {
 
 test_quick_dependency() {
     local cmd="$1"
-    if command -v "$cmd" >/dev/null 2>&1; then
+    # Extract the command name (first word) from the full command string
+    local cmd_name=$(echo "$cmd" | cut -d' ' -f1)
+
+    if command -v "$cmd_name" >/dev/null 2>&1; then
         if eval "$cmd" >/dev/null 2>&1; then
             return 0
         fi
@@ -302,7 +329,7 @@ do_start_backend() {
         # Wait for API to be ready (with timeout)
         echo -e "${CYAN}⏳ Waiting for API to be ready...${NC}"
         for i in {1..30}; do  # Increased timeout to 30 seconds
-            if lsof -Pi :$API_PORT -sTCP:LISTEN -t > /dev/null 2>&1; then
+            if is_port_listening $API_PORT; then
                 echo -e "${GREEN}✅ API is up and running on port $API_PORT!${NC}"
                 echo -e "${CYAN}   API URL: http://localhost:$API_PORT${NC}"
                 echo -e "${CYAN}   Swagger UI: http://localhost:$API_PORT/swagger${NC}"
@@ -382,7 +409,7 @@ do_start_frontend() {
         # Wait for Vite to be ready (with timeout)
         echo -e "${CYAN}⏳ Waiting for Vite to be ready...${NC}"
         for i in {1..30}; do  # Increased timeout to 30 seconds
-            if lsof -Pi :$CLIENT_PORT -sTCP:LISTEN -t > /dev/null 2>&1; then
+            if is_port_listening $CLIENT_PORT; then
                 echo -e "${GREEN}✅ Frontend is up and running on port $CLIENT_PORT!${NC}"
                 echo -e "${CYAN}   Frontend URL: http://localhost:$CLIENT_PORT${NC}"
                 wait_for_enter
@@ -414,10 +441,32 @@ do_start_frontend() {
 do_stop_all() {
     echo -e "${YELLOW}Stopping all services...${NC}"
     # Kill by port is safer than PID tracking in a simple script
-    fuser -k $API_PORT/tcp >/dev/null 2>&1
-    fuser -k $CLIENT_PORT/tcp >/dev/null 2>&1
+    kill_port $API_PORT
+    kill_port $CLIENT_PORT
     echo -e "${GREEN}Stopped.${NC}"
     sleep 1
+}
+
+# Helper function to kill processes on a port with fallbacks
+kill_port() {
+    local port=$1
+
+    # Try fuser first (Linux)
+    if command -v fuser >/dev/null 2>&1; then
+        fuser -k $port/tcp >/dev/null 2>&1 || true
+    # Try lsof + kill (macOS and Linux)
+    elif command -v lsof >/dev/null 2>&1; then
+        local pids=$(lsof -ti :$port 2>/dev/null)
+        if [[ -n "$pids" ]]; then
+            echo "$pids" | xargs -r kill -9 2>/dev/null || true
+        fi
+    # Try ss + kill (modern Linux without lsof)
+    elif command -v ss >/dev/null 2>&1; then
+        local pids=$(ss -tlnp 2>/dev/null | grep ":$port " | grep -oP 'pid=\K[0-9]+' | sort -u)
+        if [[ -n "$pids" ]]; then
+            echo "$pids" | xargs -r kill -9 2>/dev/null || true
+        fi
+    fi
 }
 
 do_view_logs() {
@@ -436,7 +485,7 @@ do_view_logs() {
 }
 
 do_open_browser() {
-    if ! lsof -Pi :$CLIENT_PORT -sTCP:LISTEN -t >/dev/null ; then
+    if ! is_port_listening $CLIENT_PORT; then
         echo -e "${RED}Frontend is not running! Please start it first.${NC}"
         wait_for_enter
         return
@@ -463,6 +512,297 @@ do_open_browser() {
 do_test() {
     echo -e "${YELLOW}Running Tests...${NC}"
     dotnet test
+    wait_for_enter
+}
+
+do_api_playground() {
+    # Check if API is running
+    if ! is_port_listening $API_PORT; then
+        echo -e "${YELLOW}⚠️  API is not running! Start it first for full functionality.${NC}"
+        echo ""
+    fi
+
+    echo -e "${CYAN}🔌 API Playground${NC}"
+    echo -e "${CYAN}===================${NC}"
+    echo ""
+    echo -e "${WHITE}API Base URL: http://localhost:$API_PORT${NC}"
+    echo ""
+    echo -e "${WHITE}Quick Actions:${NC}"
+    echo -e "  1) ${GREEN}❤️  Health Check${NC}"
+    echo -e "  2) ${CYAN}📖 Open Swagger UI (API Docs)${NC}"
+    echo -e "  3) ${YELLOW}📋 List Templates${NC}"
+    echo -e "  4) ${YELLOW}📄 List Documents${NC}"
+    echo -e "  5) ${WHITE}🔧 Test Custom Endpoint${NC}"
+    echo -e "  6) ${GRAY}ℹ️  Show API Endpoints${NC}"
+    echo ""
+    echo -e "  b) ${GRAY}Back to Main Menu${NC}"
+    echo ""
+
+    read -p "Select option: " choice
+
+    case "$choice" in
+        1) do_api_health_check ;;
+        2) do_api_open_swagger ;;
+        3) do_api_request "GET" "/api/templates" "List Templates" ;;
+        4) do_api_request "GET" "/api/documents" "List Documents" ;;
+        5) do_api_custom_endpoint ;;
+        6) do_api_show_endpoints ;;
+        b|B) return ;;
+        *)
+            echo -e "${RED}❌ Invalid option${NC}"
+            sleep 1
+            ;;
+    esac
+
+    # Loop back to playground menu unless going back
+    if [[ "$choice" != "b" && "$choice" != "B" ]]; then
+        do_api_playground
+    fi
+}
+
+do_api_health_check() {
+    echo ""
+    echo -e "${CYAN}❤️  Checking API Health...${NC}"
+    echo ""
+
+    local base_url="http://localhost:$API_PORT"
+    local endpoints=(
+        "/health|Health Endpoint"
+        "/api/templates|Templates API"
+        "/swagger|Swagger UI"
+    )
+
+    for entry in "${endpoints[@]}"; do
+        local path="${entry%%|*}"
+        local name="${entry##*|}"
+        local url="$base_url$path"
+
+        echo -n "  Testing $name... "
+
+        if command -v curl >/dev/null 2>&1; then
+            local http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "$url" 2>/dev/null)
+
+            if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+                echo -e "${GREEN}OK ($http_code)${NC}"
+            elif [[ "$http_code" == "000" ]]; then
+                echo -e "${RED}UNREACHABLE${NC}"
+            else
+                echo -e "${YELLOW}WARN ($http_code)${NC}"
+            fi
+        else
+            echo -e "${YELLOW}SKIP (curl not found)${NC}"
+        fi
+    done
+
+    echo ""
+    wait_for_enter
+}
+
+do_api_open_swagger() {
+    local url="http://localhost:$API_PORT/swagger"
+    echo ""
+    echo -e "${CYAN}📖 Opening Swagger UI...${NC}"
+    echo -e "   URL: $url"
+
+    # Try to open browser
+    if grep -q Microsoft /proc/version 2>/dev/null; then
+        # WSL
+        explorer.exe "$url" 2>/dev/null && echo -e "${GREEN}✅ Browser opened${NC}" || echo -e "${YELLOW}⚠️  Could not open browser${NC}"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        # Linux
+        xdg-open "$url" 2>/dev/null && echo -e "${GREEN}✅ Browser opened${NC}" || echo -e "${YELLOW}⚠️  Could not open browser${NC}"
+    elif command -v open >/dev/null 2>&1; then
+        # macOS
+        open "$url" 2>/dev/null && echo -e "${GREEN}✅ Browser opened${NC}" || echo -e "${YELLOW}⚠️  Could not open browser${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Could not open browser automatically${NC}"
+        echo -e "   Please open $url manually"
+    fi
+
+    wait_for_enter
+}
+
+do_api_request() {
+    local method="$1"
+    local endpoint="$2"
+    local description="$3"
+
+    local url="http://localhost:$API_PORT$endpoint"
+    echo ""
+    echo -e "${CYAN}[$method] $description${NC}"
+    echo -e "${GRAY}   URL: $url${NC}"
+    echo ""
+
+    if ! command -v curl >/dev/null 2>&1; then
+        echo -e "${RED}❌ curl is not installed${NC}"
+        echo -e "${YELLOW}   Please install curl to use this feature${NC}"
+        wait_for_enter
+        return
+    fi
+
+    local response
+    local http_code
+
+    response=$(curl -s -w "\n%{http_code}" --connect-timeout 10 -X "$method" "$url" -H "Content-Type: application/json" 2>/dev/null)
+    http_code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+
+    if [[ "$http_code" == "000" ]]; then
+        echo -e "${RED}❌ Could not connect to API${NC}"
+        echo -e "${YELLOW}   Make sure the API is running (option 2)${NC}"
+    elif [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+        echo -e "${GREEN}[RESPONSE] Status: $http_code${NC}"
+        echo ""
+
+        # Try to format JSON with jq if available
+        if command -v jq >/dev/null 2>&1; then
+            echo "$body" | jq '.' 2>/dev/null || echo "$body"
+        else
+            # Truncate if too long
+            if [[ ${#body} -gt 2000 ]]; then
+                echo "${body:0:2000}"
+                echo "... (truncated)"
+            else
+                echo "$body"
+            fi
+        fi
+    else
+        echo -e "${RED}[ERROR] Status: $http_code${NC}"
+        echo ""
+        echo "$body"
+    fi
+
+    echo ""
+    wait_for_enter
+}
+
+do_api_custom_endpoint() {
+    echo ""
+    echo -e "${CYAN}🔧 Custom Endpoint Test${NC}"
+    echo ""
+    echo -e "${GRAY}Base URL: http://localhost:$API_PORT${NC}"
+    echo ""
+
+    if ! command -v curl >/dev/null 2>&1; then
+        echo -e "${RED}❌ curl is not installed${NC}"
+        echo -e "${YELLOW}   Please install curl to use this feature${NC}"
+        wait_for_enter
+        return
+    fi
+
+    # Method selection
+    echo -e "${WHITE}HTTP Method:${NC}"
+    echo "  1) GET"
+    echo "  2) POST"
+    echo "  3) PUT"
+    echo "  4) DELETE"
+    echo ""
+
+    while true; do
+        read -p "Select method (1-4): " method_choice
+        case "$method_choice" in
+            1|2|3|4) break ;;
+            *) echo "Please enter 1, 2, 3, or 4" ;;
+        esac
+    done
+
+    local method
+    case "$method_choice" in
+        1) method="GET" ;;
+        2) method="POST" ;;
+        3) method="PUT" ;;
+        4) method="DELETE" ;;
+    esac
+
+    echo ""
+    read -p "Enter endpoint path (e.g., /api/templates): " endpoint
+
+    # Ensure endpoint starts with /
+    if [[ ! "$endpoint" =~ ^/ ]]; then
+        endpoint="/$endpoint"
+    fi
+
+    local body=""
+    if [[ "$method" == "POST" || "$method" == "PUT" ]]; then
+        echo ""
+        echo -e "${GRAY}Enter JSON body (or press Enter to skip):${NC}"
+        read body_input
+        if [[ -n "$body_input" ]]; then
+            body="$body_input"
+        fi
+    fi
+
+    local url="http://localhost:$API_PORT$endpoint"
+    echo ""
+    echo -e "${CYAN}[$method] $url${NC}"
+    echo ""
+
+    local response
+    local http_code
+    local curl_opts=(-s -w "\n%{http_code}" --connect-timeout 10 -X "$method" "$url" -H "Content-Type: application/json")
+
+    if [[ -n "$body" ]]; then
+        curl_opts+=(-d "$body")
+    fi
+
+    response=$(curl "${curl_opts[@]}" 2>/dev/null)
+    http_code=$(echo "$response" | tail -n1)
+    local response_body=$(echo "$response" | sed '$d')
+
+    if [[ "$http_code" == "000" ]]; then
+        echo -e "${RED}❌ Could not connect to API${NC}"
+        echo -e "${YELLOW}   Make sure the API is running${NC}"
+    elif [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+        echo -e "${GREEN}[RESPONSE] Status: $http_code${NC}"
+        echo ""
+
+        if command -v jq >/dev/null 2>&1; then
+            echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
+        else
+            if [[ ${#response_body} -gt 2000 ]]; then
+                echo "${response_body:0:2000}"
+                echo "... (truncated)"
+            else
+                echo "$response_body"
+            fi
+        fi
+    else
+        echo -e "${RED}[ERROR] Status: $http_code${NC}"
+        echo ""
+        echo "$response_body"
+    fi
+
+    echo ""
+    wait_for_enter
+}
+
+do_api_show_endpoints() {
+    echo ""
+    echo -e "${CYAN}ℹ️  Available API Endpoints${NC}"
+    echo -e "${CYAN}==============================${NC}"
+    echo ""
+    echo -e "${WHITE}Base URL: http://localhost:$API_PORT${NC}"
+    echo ""
+    echo -e "${YELLOW}Health & Status:${NC}"
+    echo "  GET  /health              - Health check endpoint"
+    echo "  GET  /swagger             - Swagger UI (API documentation)"
+    echo ""
+    echo -e "${YELLOW}Templates:${NC}"
+    echo "  GET    /api/templates     - List all templates"
+    echo "  GET    /api/templates/{id} - Get template by ID"
+    echo "  POST   /api/templates     - Create new template"
+    echo "  PUT    /api/templates/{id} - Update template"
+    echo "  DELETE /api/templates/{id} - Delete template"
+    echo ""
+    echo -e "${YELLOW}Documents:${NC}"
+    echo "  GET    /api/documents     - List all documents"
+    echo "  GET    /api/documents/{id} - Get document by ID"
+    echo "  POST   /api/documents     - Generate new document"
+    echo "  DELETE /api/documents/{id} - Delete document"
+    echo ""
+    echo -e "${CYAN}[TIP] Use Swagger UI (option 2) for interactive API testing${NC}"
+    echo -e "${CYAN}      with full request/response documentation.${NC}"
+    echo ""
     wait_for_enter
 }
 
@@ -522,8 +862,16 @@ proactive_dependency_check
 # Main Loop
 while true; do
     print_header
+
+    # Show Docker recommendation if dependencies have issues
+    if [[ "$DEPENDENCY_STATUS" -ne 0 ]]; then
+        echo -e "${YELLOW}[TIP] Having dependency issues? Try Docker setup (option 0) instead!${NC}"
+        echo ""
+    fi
+
     echo -e "${BOLD}Core Actions:${NC}"
-    echo "  1) 🔧 Setup Dependencies"
+    echo -e "  0) ${GREEN}🐳 Docker Quick Start${NC}"
+    echo "  1) 🔧 Setup Dependencies (Native)"
     echo "  2) 🚀 Start Backend"
     echo "  3) 🌐 Start Frontend"
     echo "  4) ⚡ Start Both Services"
@@ -535,6 +883,7 @@ while true; do
     echo "  8) 🌍 Open App in Browser"
     echo "  9) 🧪 Run Tests"
     echo ""
+    echo -e "  a) ${CYAN}🔌 API Playground (Test Endpoints)${NC}"
     echo "  r) 🔄 Refresh Status"
     echo "  c) 🗑️  Clear All Data"
     echo "  d) 🔍 Dependencies Status"
@@ -543,6 +892,18 @@ while true; do
     read -p "Select an option: " option
 
     case $option in
+        0)
+            # Launch Docker quick start
+            docker_script="$SCRIPT_DIR/scripts/docker-quick-start.sh"
+            if [[ -f "$docker_script" ]]; then
+                chmod +x "$docker_script"
+                "$docker_script"
+            else
+                echo -e "${RED}[ERROR] Docker quick start script not found at: $docker_script${NC}"
+                echo -e "${YELLOW}You can run it manually: ./scripts/docker-quick-start.sh${NC}"
+                wait_for_enter
+            fi
+            ;;
         1)
             do_setup
             # Re-check dependencies after setup
@@ -573,6 +934,9 @@ while true; do
         9)
             do_test
             ;;
+        a|A)
+            do_api_playground
+            ;;
         r)
             # Just loop to refresh
             ;;
@@ -595,7 +959,7 @@ while true; do
             exit 0
             ;;
         *)
-            echo -e "${RED}❌ Invalid option. Please select 1-9, r, c, d, or q.${NC}"
+            echo -e "${RED}❌ Invalid option. Please select 0-9, a, r, c, d, or q.${NC}"
             sleep 1
             ;;
     esac

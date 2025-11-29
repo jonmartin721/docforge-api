@@ -48,22 +48,22 @@ function Test-Docker {
 
     if (Get-Command docker -ErrorAction SilentlyContinue) {
         try {
-            $dockerInfo = docker info 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Success "✅ Docker is available and running"
+            $dockerInfo = docker info 2>&1
+            if ($null -eq $LASTEXITCODE -or $LASTEXITCODE -eq 0) {
+                Write-Success "[OK] Docker is available and running"
                 return $true
             } else {
-                Write-Warning "⚠ Docker is installed but not running"
+                Write-Warning "[WARN] Docker is installed but not running"
                 Write-Info "Please start Docker Desktop and try again"
                 return $false
             }
         }
         catch {
-            Write-Warning "⚠ Docker check failed"
+            Write-Warning "[WARN] Docker check failed"
             return $false
         }
     } else {
-        Write-Error "❌ Docker is not installed"
+        Write-Error "[ERROR] Docker is not installed"
         Write-Info "Please install Docker Desktop first:"
         Write-Info "https://www.docker.com/products/docker-desktop"
         return $false
@@ -73,18 +73,18 @@ function Test-Docker {
 function Start-DocForge {
     param([switch]$IsProduction)
 
-    Write-Header "🚀 Starting DocForge with Docker"
+    Write-Header "[START] Starting DocForge with Docker"
 
     # Check if docker-compose.yml exists
     $composeFile = if ($IsProduction) { "docker-compose.yml" } else { "docker-compose.simple.yml" }
 
     if (-not (Test-Path $composeFile)) {
-        Write-Error "❌ $composeFile not found. Please run this from the project root."
+        Write-Error "[ERROR] $composeFile not found. Please run this from the project root."
         Wait-For-Enter
         return
     }
 
-    Write-Info "🐳 Building and starting containers..."
+    Write-Info "[DOCKER] Building and starting containers..."
     Write-Info "This may take a few minutes on the first run..."
     Write-Host ""
 
@@ -103,25 +103,25 @@ function Start-DocForge {
             docker-compose -f $composeFile up -d
         }
 
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "✅ DocForge is starting up!"
+        if ($null -eq $LASTEXITCODE -or $LASTEXITCODE -eq 0) {
+            Write-Success "[OK] DocForge is starting up!"
             Write-Host ""
-            Write-Info "🌐 Application URLs:"
+            Write-Info "[URLs] Application URLs:"
 
             if ($IsProduction) {
-                Write-Host "   📱 Web App: http://localhost" -ForegroundColor White
-                Write-Host "   📊 API: http://localhost/api" -ForegroundColor White
-                Write-Host "   📚 API Docs: http://localhost/swagger" -ForegroundColor White
+                Write-Host "   Web App: http://localhost" -ForegroundColor White
+                Write-Host "   API: http://localhost/api" -ForegroundColor White
+                Write-Host "   API Docs: http://localhost/swagger" -ForegroundColor White
             } else {
-                Write-Host "   📱 Frontend: http://localhost:5173" -ForegroundColor White
-                Write-Host "   📊 API: http://localhost:5000" -ForegroundColor White
-                Write-Host "   📚 API Docs: http://localhost:5000/swagger" -ForegroundColor White
+                Write-Host "   Frontend: http://localhost:5173" -ForegroundColor White
+                Write-Host "   API: http://localhost:5000" -ForegroundColor White
+                Write-Host "   API Docs: http://localhost:5000/swagger" -ForegroundColor White
             }
 
             Write-Host ""
-            Write-Info "🔧 Management Commands:"
-            Write-Host "   View logs: .\\scripts\\docker-quick-start.ps1 -Logs" -ForegroundColor Gray
-            Write-Host "   Stop app: .\\scripts\\docker-quick-start.ps1 -Stop" -ForegroundColor Gray
+            Write-Info "[COMMANDS] Management Commands:"
+            Write-Host "   View logs: .\scripts\docker-quick-start.ps1 -Logs" -ForegroundColor Gray
+            Write-Host "   Stop app: .\scripts\docker-quick-start.ps1 -Stop" -ForegroundColor Gray
             Write-Host "   Restart: docker-compose restart" -ForegroundColor Gray
             Write-Host ""
 
@@ -132,38 +132,38 @@ function Start-DocForge {
             Start-Process $url
 
         } else {
-            Write-Error "❌ Failed to start containers"
+            Write-Error "[ERROR] Failed to start containers"
             Write-Warning "Please check the error messages above."
         }
     }
     catch {
-        Write-Error "❌ Error starting DocForge: $($_.Exception.Message)"
+        Write-Error "[ERROR] Error starting DocForge: $($_.Exception.Message)"
         Write-Info "Please check Docker is running and you have sufficient disk space."
     }
 }
 
 function Stop-DocForge {
-    Write-Header "🛑 Stopping DocForge"
+    Write-Header "[STOP] Stopping DocForge"
 
     try {
         Write-Info "Stopping all DocForge containers..."
         docker-compose down
 
         # Also stop simple version if it's running
-        docker-compose -f docker-compose.simple.yml down 2>$null
+        docker-compose -f docker-compose.simple.yml down 2>&1 | Out-Null
 
-        Write-Success "✅ All DocForge containers stopped"
+        Write-Success "[OK] All DocForge containers stopped"
         Write-Info "Data volumes are preserved. Use 'docker system prune' to clean up."
     }
     catch {
-        Write-Error "❌ Error stopping containers: $($_.Exception.Message)"
+        Write-Error "[ERROR] Error stopping containers: $($_.Exception.Message)"
     }
 
     Wait-For-Enter
 }
 
 function Show-Logs {
-    Write-Header "📋 DocForge Logs"
+    Write-Header "[LOGS] DocForge Logs"
 
     Write-Info "Showing logs from all containers..."
     Write-Info "Press Ctrl+C to exit"
@@ -182,23 +182,23 @@ function Show-Logs {
 }
 
 function Show-Menu {
-    Write-Header "🐳 DocForge Docker Quick Start"
+    Write-Header "[DOCKER] DocForge Docker Quick Start"
 
     Write-Host "Choose your deployment mode:" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "1) 🚀 Quick Start (Development)" -ForegroundColor Green
-    Write-Host "   • Fast startup, live reloading" -ForegroundColor Gray
-    Write-Host "   • Frontend: http://localhost:5173" -ForegroundColor Gray
-    Write-Host "   • API: http://localhost:5000" -ForegroundColor Gray
+    Write-Host "1) [DEV] Quick Start (Development)" -ForegroundColor Green
+    Write-Host "   * Fast startup, live reloading" -ForegroundColor Gray
+    Write-Host "   * Frontend: http://localhost:5173" -ForegroundColor Gray
+    Write-Host "   * API: http://localhost:5000" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "2) 🏭 Production Mode" -ForegroundColor Yellow
-    Write-Host "   • Optimized build, single port" -ForegroundColor Gray
-    Write-Host "   • Everything: http://localhost" -ForegroundColor Gray
-    Write-Host "   • Built-in reverse proxy" -ForegroundColor Gray
+    Write-Host "2) [PROD] Production Mode" -ForegroundColor Yellow
+    Write-Host "   * Optimized build, single port" -ForegroundColor Gray
+    Write-Host "   * Everything: http://localhost" -ForegroundColor Gray
+    Write-Host "   * Built-in reverse proxy" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "3) 📋 View Logs"
-    Write-Host "4) 🛑 Stop Services"
-    Write-Host "5) ❌ Exit"
+    Write-Host "3) [LOGS] View Logs"
+    Write-Host "4) [STOP] Stop Services"
+    Write-Host "5) [EXIT] Exit"
     Write-Host ""
 
     do {
@@ -211,7 +211,7 @@ function Show-Menu {
         "3" { Show-Logs }
         "4" { Stop-DocForge }
         "5" {
-            Write-Host "👋 Goodbye!" -ForegroundColor Green
+            Write-Host "Goodbye!" -ForegroundColor Green
             exit
         }
     }

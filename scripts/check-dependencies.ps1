@@ -10,8 +10,28 @@ param(
 
 # Import configuration
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$DependenciesConfig = Get-Content "$ScriptDir\dependencies.json" | ConvertFrom-Json
-$PlatformConfig = Get-Content "$ScriptDir\platform-config.json" | ConvertFrom-Json
+if (-not $ScriptDir) {
+    $ScriptDir = $PSScriptRoot
+}
+if (-not $ScriptDir) {
+    $ScriptDir = "."
+}
+
+# Check for required config files
+$DependenciesFile = "$ScriptDir\dependencies.json"
+$PlatformFile = "$ScriptDir\platform-config.json"
+
+if (-not (Test-Path $DependenciesFile)) {
+    Write-Host "[ERROR] dependencies.json not found at: $DependenciesFile" -ForegroundColor Red
+    exit 1
+}
+if (-not (Test-Path $PlatformFile)) {
+    Write-Host "[ERROR] platform-config.json not found at: $PlatformFile" -ForegroundColor Red
+    exit 1
+}
+
+$DependenciesConfig = Get-Content $DependenciesFile -Raw | ConvertFrom-Json
+$PlatformConfig = Get-Content $PlatformFile -Raw | ConvertFrom-Json
 
 # Color output functions
 function Write-Success {
@@ -34,9 +54,11 @@ function Write-Info {
     if (-not $Quiet) { Write-Host $Message -ForegroundColor Cyan }
 }
 
-function Write-Progress {
+function Write-ProgressStatus {
     param([string]$Message, [int]$PercentComplete = 0)
-    if (-not $Quiet) { Write-Progress -Activity "Checking Dependencies" -Status $Message -PercentComplete $PercentComplete }
+    if (-not $Quiet) {
+        Write-Host "[PROGRESS] $Message ($PercentComplete%)" -ForegroundColor Gray
+    }
 }
 
 # Dependency checking functions
@@ -46,7 +68,7 @@ function Test-Dependency {
         [object]$Dependency
     )
 
-    Write-Progress "Checking $($Dependency.name)..." -PercentComplete 0
+    Write-ProgressStatus "Checking $($Dependency.name)..." -PercentComplete 0
 
     try {
         $windowsConfig = $Dependency.windows
@@ -59,19 +81,19 @@ function Test-Dependency {
         # Execute check command
         $result = Invoke-Expression $checkCommand 2>$null
 
-        if ($LASTEXITCODE -eq 0) {
+        if ($null -eq $LASTEXITCODE -or $LASTEXITCODE -eq 0) {
             $version = Extract-VersionFromOutput $result
             $isValidVersion = Test-VersionRequirement $version $Dependency.version $Dependency.minVersion
 
             if ($isValidVersion) {
-                Write-Success "✓ $($Dependency.name) ($version)"
+                Write-Success "[OK] $($Dependency.name) ($version)"
                 return @{
                     Status = "OK";
                     Version = $version;
                     Message = "Installed and valid"
                 }
             } else {
-                Write-Warning "⚠ $($Dependency.name) ($version) - version incompatible"
+                Write-Warning "[WARN] $($Dependency.name) ($version) - version incompatible"
                 return @{
                     Status = "WRONG_VERSION";
                     Version = $version;
@@ -79,7 +101,7 @@ function Test-Dependency {
                 }
             }
         } else {
-            Write-Error "✗ $($Dependency.name) - not found"
+            Write-Error "[MISSING] $($Dependency.name) - not found"
             return @{
                 Status = "MISSING";
                 Version = "";
@@ -88,7 +110,7 @@ function Test-Dependency {
         }
     }
     catch {
-        Write-Error "✗ $($Dependency.name) - check failed: $($_.Exception.Message)"
+        Write-Error "[ERROR] $($Dependency.name) - check failed: $($_.Exception.Message)"
         return @{
             Status = "ERROR";
             Version = "";
@@ -112,7 +134,8 @@ function Extract-VersionFromOutput {
 
     foreach ($pattern in $patterns) {
         if ($Output -match $pattern) {
-            return $matches[1] ?? $matches[0]
+            # PS5.1 compatible - avoid ?? operator
+            if ($matches[1]) { return $matches[1] } else { return $matches[0] }
         }
     }
 
@@ -182,30 +205,30 @@ function Install-Dependency {
         }
 
         # Execute installation
-        Write-Progress "Installing $($Dependency.name)..." -PercentComplete 50
+        Write-ProgressStatus "Installing $($Dependency.name)..." -PercentComplete 50
         $result = Invoke-Expression $installCommand
 
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "✓ $($Dependency.name) installed successfully"
+        if ($null -eq $LASTEXITCODE -or $LASTEXITCODE -eq 0) {
+            Write-Success "[OK] $($Dependency.name) installed successfully"
 
             # Verify installation
             Start-Sleep -Seconds 2
             $newStatus = Test-Dependency $DependencyId $Dependency
             if ($newStatus.Status -eq "OK") {
-                Write-Success "✓ $($Dependency.name) verified: $($newStatus.Version)"
+                Write-Success "[OK] $($Dependency.name) verified: $($newStatus.Version)"
                 return $true
             } else {
-                Write-Warning "⚠ $($Dependency.name) installed but verification failed"
+                Write-Warning "[WARN] $($Dependency.name) installed but verification failed"
                 return $false
             }
         } else {
-            Write-Error "✗ Installation failed for $($Dependency.name)"
+            Write-Error "[ERROR] Installation failed for $($Dependency.name)"
             Show-ManualInstallationInstructions $Dependency
             return $false
         }
     }
     catch {
-        Write-Error "✗ Installation error for $($Dependency.name): $($_.Exception.Message)"
+        Write-Error "[ERROR] Installation error for $($Dependency.name): $($_.Exception.Message)"
         Show-ManualInstallationInstructions $Dependency
         return $false
     }
@@ -253,15 +276,15 @@ function Show-DependencySummary {
 
         switch ($status) {
             "OK" {
-                Write-Success "✓ $($dep.Key): $($dep.Value.Version)"
+                Write-Success "[OK] $($dep.Key): $($dep.Value.Version)"
                 $ok++
             }
             "MISSING" {
-                Write-Error "✗ $($dep.Key): Not installed"
+                Write-Error "[MISSING] $($dep.Key): Not installed"
                 $issues++
             }
             "WRONG_VERSION" {
-                Write-Warning "⚠ $($dep.Key): Wrong version ($($dep.Value.Version))"
+                Write-Warning "[WARN] $($dep.Key): Wrong version ($($dep.Value.Version))"
                 $issues++
             }
             default {
@@ -278,6 +301,26 @@ function Show-DependencySummary {
         Write-Success "All dependencies are satisfied!"
     } else {
         Write-Warning "Found $issues dependency issue(s)"
+        Write-Host ""
+        Write-Host "Manual Download Links:" -ForegroundColor Yellow
+        Write-Host "----------------------" -ForegroundColor Yellow
+
+        foreach ($dep in $Results.GetEnumerator()) {
+            if ($dep.Value.Status -ne "OK") {
+                $depConfig = $DependenciesConfig.dependencies.($dep.Key)
+                $url = $depConfig.windows.manualInstallUrl
+                if ($url) {
+                    Write-Host "  $($depConfig.name): " -NoNewline -ForegroundColor White
+                    Write-Host $url -ForegroundColor Cyan
+                }
+            }
+        }
+
+        Write-Host ""
+        Write-Host "[TIP] Or use Docker for an easier setup experience:" -ForegroundColor Green
+        Write-Host "      https://www.docker.com/products/docker-desktop" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "After installing, restart your terminal and run this check again." -ForegroundColor Gray
     }
 }
 
@@ -344,7 +387,7 @@ function Main {
         }
 
         $dependency = $DependenciesConfig.dependencies.$depId
-        Write-Progress "Checking $($dependency.name)..." -PercentComplete $progressPercent
+        Write-ProgressStatus "Checking $($dependency.name)..." -PercentComplete $progressPercent
 
         $status = Test-Dependency $depId $dependency
         $results[$depId] = $status
@@ -357,7 +400,7 @@ function Main {
         }
     }
 
-    Write-Progress "Complete" -PercentComplete 100
+    Write-ProgressStatus "Complete" -PercentComplete 100
 
     # Show summary
     if (-not $Quiet) {
