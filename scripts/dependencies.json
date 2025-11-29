@@ -40,7 +40,7 @@
     "nodejs": {
       "name": "Node.js",
       "description": "Required for frontend development",
-      "version": "18.*",
+      "version": ">=18.0.0",
       "minVersion": "18.0.0",
       "required": true,
       "category": "development",
@@ -49,7 +49,7 @@
         "packageId": "OpenJS.NodeJS",
         "checkCommand": "node --version",
         "validateCommand": "node --version",
-        "versionPattern": "^v18\\.",
+        "versionPattern": "^v(1[8-9]|[2-9][0-9])\\.",
         "installCommand": "winget install OpenJS.NodeJS --accept-source-agreements --accept-package-agreements",
         "alternativeInstall": "winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements",
         "manualInstallUrl": "https://nodejs.org/en/download/"
@@ -59,8 +59,8 @@
         "packageName": "nodejs",
         "checkCommand": "node --version",
         "validateCommand": "node --version",
-        "versionPattern": "^v18\\.",
-        "installCommand": "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs",
+        "versionPattern": "^v(1[8-9]|[2-9][0-9])\\.",
+        "installCommand": "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs",
         "snapCommand": "sudo snap install node --classic",
         "manualInstallUrl": "https://nodejs.org/en/download/"
       },
@@ -69,8 +69,8 @@
         "packageName": "node",
         "checkCommand": "node --version",
         "validateCommand": "node --version",
-        "versionPattern": "^v18\\.",
-        "installCommand": "brew install node@18",
+        "versionPattern": "^v(1[8-9]|[2-9][0-9])\\.",
+        "installCommand": "brew install node",
         "manualInstallUrl": "https://nodejs.org/en/download/"
       }
     },
@@ -159,8 +159,7 @@
         "notes": "Docker Engine instead of Docker Desktop on Linux"
       },
       "macos": {
-        "packageManager": "brew",
-        "packageManager": "cask",
+        "packageManager": "brew-cask",
         "packageName": "docker",
         "checkCommand": "docker --version",
         "validateCommand": "docker info",
@@ -191,8 +190,7 @@
         "manualInstallUrl": "https://code.visualstudio.com/"
       },
       "macos": {
-        "packageManager": "brew",
-        "packageManager": "cask",
+        "packageManager": "brew-cask",
         "packageName": "visual-studio-code",
         "checkCommand": "code --version",
         "installCommand": "brew install --cask visual-studio-code",
@@ -222,8 +220,7 @@
       "macos": {
         "checkCommand": "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --version",
         "alternativeCheck": "/Applications/Microsoft\\ Edge.app/Contents/MacOS/Microsoft\\ Edge --version",
-        "packageManager": "brew",
-        "packageManager": "cask",
+        "packageManager": "brew-cask",
         "packageName": "google-chrome",
         "installCommand": "brew install --cask google-chrome",
         "alternativeInstall": "brew install --cask microsoft-edge",

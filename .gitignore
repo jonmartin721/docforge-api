@@ -35,4 +35,26 @@ Thumbs.db
 .copilot/
 .claude/
 .agent/
+.codeium/
+.tabnine/
+.continue/
+.cody/
+.sourcegraph/
+.amazonq/
+.aws/codewhisperer/
+.junie/
+.goose/
+.roo/
+.augment/
+.codegen/
+.devin/
+.mentat/
+
+# AI Agent Config Files
+CLAUDE.md
 AGENTS.md
+.cursorrules
+.cursorignore
+.aiderignore
+.codeiumignore
+.github/copilot-instructions.md
