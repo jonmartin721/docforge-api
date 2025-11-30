@@ -683,6 +683,18 @@ function Do-API-OpenSwagger {
     Wait-For-Enter
 }
 
+function Get-HttpStatusMessage {
+    param([int]$Code)
+    switch ($Code) {
+        401 { return "Unauthorized - Login required (use Swagger UI to authenticate)" }
+        403 { return "Forbidden - You don't have permission for this resource" }
+        404 { return "Not Found - Check the endpoint path" }
+        429 { return "Too Many Requests - Rate limit exceeded, wait and retry" }
+        { $_ -ge 500 } { return "Server Error - Check API logs (option 8)" }
+        default { return $null }
+    }
+}
+
 function Do-API-Request {
     param(
         [string]$Method,
@@ -696,8 +708,22 @@ function Do-API-Request {
     Write-Host "   URL: $url" -ForegroundColor Gray
     Write-Host ""
 
+    # Pre-check: is API running?
+    $apiRunning = $false
     try {
-        $response = Invoke-WebRequest -Uri $url -Method $Method -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        $conn = Get-NetTCPConnection -LocalPort $API_PORT -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' }
+        if ($conn) { $apiRunning = $true }
+    } catch {}
+
+    if (-not $apiRunning) {
+        Write-Host "[ERROR] API is not running on port $API_PORT" -ForegroundColor Red
+        Write-Host "   Start the backend first (option 1)" -ForegroundColor Yellow
+        Wait-For-Enter
+        return
+    }
+
+    try {
+        $response = Invoke-WebRequest -Uri $url -Method $Method -TimeoutSec 15 -UseBasicParsing -ErrorAction Stop
         $statusCode = $response.StatusCode
 
         Write-Host "[RESPONSE] Status: $statusCode" -ForegroundColor Green
@@ -707,10 +733,10 @@ function Do-API-Request {
         try {
             $json = $response.Content | ConvertFrom-Json
             $formatted = $json | ConvertTo-Json -Depth 5
+            $totalLen = $formatted.Length
 
-            # Truncate if too long
-            if ($formatted.Length -gt 2000) {
-                $formatted = $formatted.Substring(0, 2000) + "`n... (truncated)"
+            if ($totalLen -gt 2000) {
+                $formatted = $formatted.Substring(0, 2000) + "`n... (truncated - showing 2000 of $totalLen characters)"
             }
 
             Write-Host $formatted -ForegroundColor White
@@ -718,8 +744,9 @@ function Do-API-Request {
         catch {
             # Not JSON, show raw content
             $content = $response.Content
-            if ($content.Length -gt 2000) {
-                $content = $content.Substring(0, 2000) + "`n... (truncated)"
+            $totalLen = $content.Length
+            if ($totalLen -gt 2000) {
+                $content = $content.Substring(0, 2000) + "`n... (truncated - showing 2000 of $totalLen characters)"
             }
             Write-Host $content -ForegroundColor White
         }
@@ -728,14 +755,19 @@ function Do-API-Request {
         $statusCode = $_.Exception.Response.StatusCode.value__
         if ($statusCode) {
             Write-Host "[ERROR] Status: $statusCode" -ForegroundColor Red
+            $statusMsg = Get-HttpStatusMessage -Code $statusCode
+            if ($statusMsg) {
+                Write-Host "   $statusMsg" -ForegroundColor Yellow
+            }
             try {
                 $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
                 $errorContent = $reader.ReadToEnd()
+                $reader.Dispose()
                 Write-Host $errorContent -ForegroundColor Red
             } catch {}
         } else {
-            Write-Host "[ERROR] Could not connect to API" -ForegroundColor Red
-            Write-Host "   Make sure the API is running (option 2)" -ForegroundColor Yellow
+            Write-Host "[ERROR] Request failed" -ForegroundColor Red
+            Write-Host "   Connection timed out or was refused" -ForegroundColor Yellow
         }
     }
 
@@ -749,6 +781,20 @@ function Do-API-CustomEndpoint {
     Write-Host ""
     Write-Host "Base URL: http://localhost:$API_PORT" -ForegroundColor Gray
     Write-Host ""
+
+    # Pre-check: is API running?
+    $apiRunning = $false
+    try {
+        $conn = Get-NetTCPConnection -LocalPort $API_PORT -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' }
+        if ($conn) { $apiRunning = $true }
+    } catch {}
+
+    if (-not $apiRunning) {
+        Write-Host "[ERROR] API is not running on port $API_PORT" -ForegroundColor Red
+        Write-Host "   Start the backend first (option 1)" -ForegroundColor Yellow
+        Wait-For-Enter
+        return
+    }
 
     # Method selection
     Write-Host "HTTP Method:" -ForegroundColor White
@@ -782,7 +828,17 @@ function Do-API-CustomEndpoint {
         Write-Host "Enter JSON body (or press Enter to skip):" -ForegroundColor Gray
         $bodyInput = Read-Host
         if (-not [string]::IsNullOrWhiteSpace($bodyInput)) {
-            $body = $bodyInput
+            # Validate JSON
+            try {
+                $null = $bodyInput | ConvertFrom-Json -ErrorAction Stop
+                $body = $bodyInput
+            }
+            catch {
+                Write-Host "[ERROR] Invalid JSON format" -ForegroundColor Red
+                Write-Host "   Check your syntax (quotes, brackets, commas)" -ForegroundColor Yellow
+                Wait-For-Enter
+                return
+            }
         }
     }
 
@@ -795,7 +851,7 @@ function Do-API-CustomEndpoint {
         $params = @{
             Uri = $url
             Method = $method
-            TimeoutSec = 10
+            TimeoutSec = 15
             UseBasicParsing = $true
             ContentType = "application/json"
             ErrorAction = "Stop"
@@ -814,15 +870,17 @@ function Do-API-CustomEndpoint {
         try {
             $json = $response.Content | ConvertFrom-Json
             $formatted = $json | ConvertTo-Json -Depth 5
-            if ($formatted.Length -gt 2000) {
-                $formatted = $formatted.Substring(0, 2000) + "`n... (truncated)"
+            $totalLen = $formatted.Length
+            if ($totalLen -gt 2000) {
+                $formatted = $formatted.Substring(0, 2000) + "`n... (truncated - showing 2000 of $totalLen characters)"
             }
             Write-Host $formatted -ForegroundColor White
         }
         catch {
             $content = $response.Content
-            if ($content.Length -gt 2000) {
-                $content = $content.Substring(0, 2000) + "`n... (truncated)"
+            $totalLen = $content.Length
+            if ($totalLen -gt 2000) {
+                $content = $content.Substring(0, 2000) + "`n... (truncated - showing 2000 of $totalLen characters)"
             }
             Write-Host $content -ForegroundColor White
         }
@@ -831,14 +889,19 @@ function Do-API-CustomEndpoint {
         $statusCode = $_.Exception.Response.StatusCode.value__
         if ($statusCode) {
             Write-Host "[ERROR] Status: $statusCode" -ForegroundColor Red
+            $statusMsg = Get-HttpStatusMessage -Code $statusCode
+            if ($statusMsg) {
+                Write-Host "   $statusMsg" -ForegroundColor Yellow
+            }
             try {
                 $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
                 $errorContent = $reader.ReadToEnd()
+                $reader.Dispose()
                 Write-Host $errorContent -ForegroundColor Red
             } catch {}
         } else {
-            Write-Host "[ERROR] Could not connect to API" -ForegroundColor Red
-            Write-Host "   Make sure the API is running" -ForegroundColor Yellow
+            Write-Host "[ERROR] Request failed" -ForegroundColor Red
+            Write-Host "   Connection timed out or was refused" -ForegroundColor Yellow
         }
     }
 
@@ -910,34 +973,42 @@ while ($true) {
 
     # Show Docker recommendation for Windows if dependencies have issues
     if ($Global:DependencyStatus -ne 0) {
-        Write-Host "[TIP] Having dependency issues? Try Docker setup (option 0) instead!" -ForegroundColor Yellow
+        Write-Host "[TIP] Having dependency issues? Try Docker setup (option 5) instead!" -ForegroundColor Yellow
         Write-Host ""
     }
 
-    Write-Host "Core Actions:" -ForegroundColor White
-    Write-Host "  0) [DOCKER] Docker Quick Start (Recommended for Windows)" -ForegroundColor Green
-    Write-Host "  1) [SETUP] Setup Dependencies (Native)"
-    Write-Host "  2) [START] Start Backend"
-    Write-Host "  3) [WEB] Start Frontend"
-    Write-Host "  4) [START] Start Both Services"
-    Write-Host "  5) [EXIT] Stop All Services"
+    Write-Host "Services:" -ForegroundColor White
+    Write-Host "  1) [START] Start Backend"
+    Write-Host "  2) [WEB] Start Frontend"
+    Write-Host "  3) [START] Start Both Services"
+    Write-Host "  4) [STOP] Stop All Services"
+    Write-Host ""
+    Write-Host "Setup & Dependencies:" -ForegroundColor White
+    Write-Host "  5) [DOCKER] Docker Quick Start" -ForegroundColor Green
+    Write-Host "  6) [SETUP] Native Setup"
+    Write-Host "  7) [CHECK] Check Dependencies"
     Write-Host ""
     Write-Host "Tools:" -ForegroundColor White
-    Write-Host "  6) [LOGS] View Backend Logs"
-    Write-Host "  7) [LOGS] View Frontend Logs"
-    Write-Host "  8) [WEB] Open App in Browser"
-    Write-Host "  9) [CHECK] Run Tests"
-    Write-Host ""
-    Write-Host "  a) [API] API Playground (Test Endpoints)" -ForegroundColor Cyan
+    Write-Host "  8) [LOGS] View Backend Logs"
+    Write-Host "  9) [LOGS] View Frontend Logs"
+    Write-Host "  0) [WEB] Open App in Browser"
+    Write-Host "  a) [API] API Playground" -ForegroundColor Cyan
+    Write-Host "  t) [TEST] Run Tests"
     Write-Host "  r) [CHECK] Refresh Status"
     Write-Host "  c) [WARN] Clear All Data"
-    Write-Host "  d) [CHECK] Dependencies Status"
     Write-Host "  q) [EXIT] Quit"
     Write-Host ""
     $option = Read-Host "Select an option"
 
     switch ($option) {
-        "0" {
+        "1" { Do-Start-Backend }
+        "2" { Do-Start-Frontend }
+        "3" {
+            Do-Start-Backend
+            Do-Start-Frontend
+        }
+        "4" { Do-Stop-All }
+        "5" {
             # Launch Docker quick start
             $dockerScript = "$ScriptDir\scripts\docker-quick-start.ps1"
             if (Test-Path $dockerScript) {
@@ -948,26 +1019,12 @@ while ($true) {
                 Wait-For-Enter
             }
         }
-        "1" {
+        "6" {
             Do-Setup
             # Re-check dependencies after setup
             Invoke-ProactiveDependencyCheck
         }
-        "2" { Do-Start-Backend }
-        "3" { Do-Start-Frontend }
-        "4" {
-            Do-Start-Backend
-            Do-Start-Frontend
-        }
-        "5" { Do-Stop-All }
-        "6" { Do-View-Logs "api.log" "Backend" }
-        "7" { Do-View-Logs "client.log" "Frontend" }
-        "8" { Do-Open-Browser }
-        "9" { Do-Test }
-        "a" { Do-API-Playground }
-        "r" { } # Just loop to refresh
-        "c" { Do-Clear-Data }
-        "d" {
+        "7" {
             $dependencyChecker = "$ScriptDir\scripts\check-dependencies.ps1"
             if (Test-Path $dependencyChecker) {
                 & $dependencyChecker
@@ -977,12 +1034,19 @@ while ($true) {
                 Wait-For-Enter
             }
         }
+        "8" { Do-View-Logs "api.log" "Backend" }
+        "9" { Do-View-Logs "client.log" "Frontend" }
+        "0" { Do-Open-Browser }
+        "a" { Do-API-Playground }
+        "t" { Do-Test }
+        "r" { } # Just loop to refresh
+        "c" { Do-Clear-Data }
         "q" {
             Write-Host "[EXIT] Goodbye!" -ForegroundColor Green
             exit
         }
         Default {
-            Write-Host "[ERROR] Invalid option. Please select 0-9, a, r, c, d, or q." -ForegroundColor Red
+            Write-Host "[ERROR] Invalid option. Please select 0-9, a, t, r, c, or q." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }

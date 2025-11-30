@@ -622,6 +622,18 @@ do_api_open_swagger() {
     wait_for_enter
 }
 
+get_http_status_message() {
+    local code="$1"
+    case "$code" in
+        401) echo "Unauthorized - Login required (use Swagger UI to authenticate)" ;;
+        403) echo "Forbidden - You don't have permission for this resource" ;;
+        404) echo "Not Found - Check the endpoint path" ;;
+        429) echo "Too Many Requests - Rate limit exceeded, wait and retry" ;;
+        5*) echo "Server Error - Check API logs (option 8)" ;;
+        *) echo "" ;;
+    esac
+}
+
 do_api_request() {
     local method="$1"
     local endpoint="$2"
@@ -640,16 +652,24 @@ do_api_request() {
         return
     fi
 
+    # Pre-check: is API running?
+    if ! is_port_listening $API_PORT; then
+        echo -e "${RED}❌ API is not running on port $API_PORT${NC}"
+        echo -e "${YELLOW}   Start the backend first (option 1)${NC}"
+        wait_for_enter
+        return
+    fi
+
     local response
     local http_code
 
-    response=$(curl -s -w "\n%{http_code}" --connect-timeout 10 -X "$method" "$url" -H "Content-Type: application/json" 2>/dev/null)
+    response=$(curl -s -w "\n%{http_code}" --connect-timeout 10 --max-time 15 -X "$method" "$url" -H "Content-Type: application/json" 2>/dev/null)
     http_code=$(echo "$response" | tail -n1)
     local body=$(echo "$response" | sed '$d')
 
     if [[ "$http_code" == "000" ]]; then
-        echo -e "${RED}❌ Could not connect to API${NC}"
-        echo -e "${YELLOW}   Make sure the API is running (option 2)${NC}"
+        echo -e "${RED}❌ Request failed${NC}"
+        echo -e "${YELLOW}   Connection timed out or was refused${NC}"
     elif [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
         echo -e "${GREEN}[RESPONSE] Status: $http_code${NC}"
         echo ""
@@ -658,16 +678,20 @@ do_api_request() {
         if command -v jq >/dev/null 2>&1; then
             echo "$body" | jq '.' 2>/dev/null || echo "$body"
         else
-            # Truncate if too long
-            if [[ ${#body} -gt 2000 ]]; then
+            local body_len=${#body}
+            if [[ $body_len -gt 2000 ]]; then
                 echo "${body:0:2000}"
-                echo "... (truncated)"
+                echo -e "${GRAY}... (truncated - showing 2000 of $body_len characters)${NC}"
             else
                 echo "$body"
             fi
         fi
     else
         echo -e "${RED}[ERROR] Status: $http_code${NC}"
+        local status_msg=$(get_http_status_message "$http_code")
+        if [[ -n "$status_msg" ]]; then
+            echo -e "${YELLOW}   $status_msg${NC}"
+        fi
         echo ""
         echo "$body"
     fi
@@ -686,6 +710,14 @@ do_api_custom_endpoint() {
     if ! command -v curl >/dev/null 2>&1; then
         echo -e "${RED}❌ curl is not installed${NC}"
         echo -e "${YELLOW}   Please install curl to use this feature${NC}"
+        wait_for_enter
+        return
+    fi
+
+    # Pre-check: is API running?
+    if ! is_port_listening $API_PORT; then
+        echo -e "${RED}❌ API is not running on port $API_PORT${NC}"
+        echo -e "${YELLOW}   Start the backend first (option 1)${NC}"
         wait_for_enter
         return
     fi
@@ -728,6 +760,15 @@ do_api_custom_endpoint() {
         echo -e "${GRAY}Enter JSON body (or press Enter to skip):${NC}"
         read body_input
         if [[ -n "$body_input" ]]; then
+            # Validate JSON if jq is available
+            if command -v jq >/dev/null 2>&1; then
+                if ! echo "$body_input" | jq '.' >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Invalid JSON format${NC}"
+                    echo -e "${YELLOW}   Check your syntax (quotes, brackets, commas)${NC}"
+                    wait_for_enter
+                    return
+                fi
+            fi
             body="$body_input"
         fi
     fi
@@ -739,7 +780,7 @@ do_api_custom_endpoint() {
 
     local response
     local http_code
-    local curl_opts=(-s -w "\n%{http_code}" --connect-timeout 10 -X "$method" "$url" -H "Content-Type: application/json")
+    local curl_opts=(-s -w "\n%{http_code}" --connect-timeout 10 --max-time 15 -X "$method" "$url" -H "Content-Type: application/json")
 
     if [[ -n "$body" ]]; then
         curl_opts+=(-d "$body")
@@ -750,8 +791,8 @@ do_api_custom_endpoint() {
     local response_body=$(echo "$response" | sed '$d')
 
     if [[ "$http_code" == "000" ]]; then
-        echo -e "${RED}❌ Could not connect to API${NC}"
-        echo -e "${YELLOW}   Make sure the API is running${NC}"
+        echo -e "${RED}❌ Request failed${NC}"
+        echo -e "${YELLOW}   Connection timed out or was refused${NC}"
     elif [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
         echo -e "${GREEN}[RESPONSE] Status: $http_code${NC}"
         echo ""
@@ -759,15 +800,20 @@ do_api_custom_endpoint() {
         if command -v jq >/dev/null 2>&1; then
             echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
         else
-            if [[ ${#response_body} -gt 2000 ]]; then
+            local body_len=${#response_body}
+            if [[ $body_len -gt 2000 ]]; then
                 echo "${response_body:0:2000}"
-                echo "... (truncated)"
+                echo -e "${GRAY}... (truncated - showing 2000 of $body_len characters)${NC}"
             else
                 echo "$response_body"
             fi
         fi
     else
         echo -e "${RED}[ERROR] Status: $http_code${NC}"
+        local status_msg=$(get_http_status_message "$http_code")
+        if [[ -n "$status_msg" ]]; then
+            echo -e "${YELLOW}   $status_msg${NC}"
+        fi
         echo ""
         echo "$response_body"
     fi
@@ -865,34 +911,48 @@ while true; do
 
     # Show Docker recommendation if dependencies have issues
     if [[ "$DEPENDENCY_STATUS" -ne 0 ]]; then
-        echo -e "${YELLOW}[TIP] Having dependency issues? Try Docker setup (option 0) instead!${NC}"
+        echo -e "${YELLOW}[TIP] Having dependency issues? Try Docker setup (option 5) instead!${NC}"
         echo ""
     fi
 
-    echo -e "${BOLD}Core Actions:${NC}"
-    echo -e "  0) ${GREEN}🐳 Docker Quick Start${NC}"
-    echo "  1) 🔧 Setup Dependencies (Native)"
-    echo "  2) 🚀 Start Backend"
-    echo "  3) 🌐 Start Frontend"
-    echo "  4) ⚡ Start Both Services"
-    echo "  5) 🛑 Stop All Services"
+    echo -e "${BOLD}Services:${NC}"
+    echo "  1) 🚀 Start Backend"
+    echo "  2) 🌐 Start Frontend"
+    echo "  3) ⚡ Start Both Services"
+    echo "  4) 🛑 Stop All Services"
+    echo ""
+    echo -e "${BOLD}Setup & Dependencies:${NC}"
+    echo -e "  5) ${GREEN}🐳 Docker Quick Start${NC}"
+    echo "  6) 🔧 Native Setup"
+    echo "  7) 🔍 Check Dependencies"
     echo ""
     echo -e "${BOLD}Tools:${NC}"
-    echo "  6) 📄 View Backend Logs"
-    echo "  7) 📑 View Frontend Logs"
-    echo "  8) 🌍 Open App in Browser"
-    echo "  9) 🧪 Run Tests"
-    echo ""
-    echo -e "  a) ${CYAN}🔌 API Playground (Test Endpoints)${NC}"
+    echo "  8) 📄 View Backend Logs"
+    echo "  9) 📑 View Frontend Logs"
+    echo "  0) 🌍 Open App in Browser"
+    echo -e "  a) ${CYAN}🔌 API Playground${NC}"
+    echo "  t) 🧪 Run Tests"
     echo "  r) 🔄 Refresh Status"
     echo "  c) 🗑️  Clear All Data"
-    echo "  d) 🔍 Dependencies Status"
     echo "  q) 👋 Quit"
     echo ""
     read -p "Select an option: " option
 
     case $option in
-        0)
+        1)
+            do_start_backend
+            ;;
+        2)
+            do_start_frontend
+            ;;
+        3)
+            do_start_backend
+            do_start_frontend
+            ;;
+        4)
+            do_stop_all
+            ;;
+        5)
             # Launch Docker quick start
             docker_script="$SCRIPT_DIR/scripts/docker-quick-start.sh"
             if [[ -f "$docker_script" ]]; then
@@ -904,46 +964,12 @@ while true; do
                 wait_for_enter
             fi
             ;;
-        1)
+        6)
             do_setup
             # Re-check dependencies after setup
             proactive_dependency_check
             ;;
-        2)
-            do_start_backend
-            ;;
-        3)
-            do_start_frontend
-            ;;
-        4)
-            do_start_backend
-            do_start_frontend
-            ;;
-        5)
-            do_stop_all
-            ;;
-        6)
-            do_view_logs "api.log" "Backend"
-            ;;
         7)
-            do_view_logs "client.log" "Frontend"
-            ;;
-        8)
-            do_open_browser
-            ;;
-        9)
-            do_test
-            ;;
-        a|A)
-            do_api_playground
-            ;;
-        r)
-            # Just loop to refresh
-            ;;
-        c)
-            do_clear_data
-            ;;
-        d)
             dependency_checker="$SCRIPT_DIR/scripts/check-dependencies.sh"
             if [[ -f "$dependency_checker" ]]; then
                 "$dependency_checker"
@@ -954,12 +980,33 @@ while true; do
                 wait_for_enter
             fi
             ;;
-        q)
+        8)
+            do_view_logs "api.log" "Backend"
+            ;;
+        9)
+            do_view_logs "client.log" "Frontend"
+            ;;
+        0)
+            do_open_browser
+            ;;
+        a|A)
+            do_api_playground
+            ;;
+        t|T)
+            do_test
+            ;;
+        r|R)
+            # Just loop to refresh
+            ;;
+        c|C)
+            do_clear_data
+            ;;
+        q|Q)
             echo -e "${GREEN}👋 Goodbye!${NC}"
             exit 0
             ;;
         *)
-            echo -e "${RED}❌ Invalid option. Please select 0-9, a, r, c, d, or q.${NC}"
+            echo -e "${RED}❌ Invalid option. Please select 0-9, a, t, r, c, or q.${NC}"
             sleep 1
             ;;
     esac
