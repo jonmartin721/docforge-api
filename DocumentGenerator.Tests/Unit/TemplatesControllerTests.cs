@@ -14,16 +14,18 @@ namespace DocumentGenerator.Tests.Unit
     {
         private readonly TemplatesController _controller;
         private readonly Mock<ITemplateService> _mockTemplateService;
+        private readonly Guid _userId;
 
         public TemplatesControllerTests()
         {
             _mockTemplateService = new Mock<ITemplateService>();
             _controller = new TemplatesController(_mockTemplateService.Object);
+            _userId = Guid.NewGuid();
 
             // Setup User Context
             var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
             {
-                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
+                new Claim(ClaimTypes.NameIdentifier, _userId.ToString())
             }, "mock"));
 
             _controller.ControllerContext = new ControllerContext()
@@ -61,8 +63,10 @@ namespace DocumentGenerator.Tests.Unit
                 new TemplateDto { Id = Guid.NewGuid(), Name = "T2" }
             };
 
-            _mockTemplateService.Setup(s => s.GetAllAsync())
-                .ReturnsAsync(templates);
+            var paginatedResult = new PaginatedResult<TemplateDto>(templates, 2, 1, 20);
+
+            _mockTemplateService.Setup(s => s.GetAllAsync(It.IsAny<Guid>(), 1, 20))
+                .ReturnsAsync(paginatedResult);
 
             // Act
             var result = await _controller.GetAll();
@@ -70,7 +74,9 @@ namespace DocumentGenerator.Tests.Unit
             // Assert
             var okResult = result.Result as OkObjectResult;
             okResult.Should().NotBeNull();
-            okResult!.Value.Should().BeEquivalentTo(templates);
+            var returnedResult = okResult!.Value as PaginatedResult<TemplateDto>;
+            returnedResult.Should().NotBeNull();
+            returnedResult!.Items.Should().HaveCount(2);
         }
     }
 }

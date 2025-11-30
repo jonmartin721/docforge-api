@@ -1,10 +1,12 @@
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Entities;
+using DocumentGenerator.Core.Exceptions;
 using DocumentGenerator.Core.Settings;
 using DocumentGenerator.Infrastructure.Data;
 using DocumentGenerator.Infrastructure.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -16,6 +18,7 @@ namespace DocumentGenerator.Tests.Unit
         private readonly AuthService _authService;
         private readonly ApplicationDbContext _context;
         private readonly Mock<IOptions<JwtSettings>> _mockJwtSettings;
+        private readonly Mock<ILogger<AuthService>> _mockLogger;
 
         public AuthServiceTests()
         {
@@ -34,7 +37,9 @@ namespace DocumentGenerator.Tests.Unit
                 RefreshTokenExpiryDays = 7
             });
 
-            _authService = new AuthService(_context, _mockJwtSettings.Object);
+            _mockLogger = new Mock<ILogger<AuthService>>();
+
+            _authService = new AuthService(_context, _mockJwtSettings.Object, _mockLogger.Object);
         }
 
         [Fact]
@@ -85,7 +90,7 @@ namespace DocumentGenerator.Tests.Unit
             Func<Task> act = async () => await _authService.RegisterAsync(dto);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Username already exists");
+            await act.Should().ThrowAsync<DuplicateUsernameException>();
         }
     }
 }

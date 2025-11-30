@@ -1,12 +1,14 @@
 using AutoMapper;
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Entities;
+using DocumentGenerator.Core.Exceptions;
 using DocumentGenerator.Core.Mappings;
 using DocumentGenerator.Infrastructure.Data;
 using DocumentGenerator.Infrastructure.Services;
 using DocumentGenerator.Core.Interfaces;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -18,6 +20,7 @@ namespace DocumentGenerator.Tests.Unit
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly Mock<IDocumentService> _mockDocumentService;
+        private readonly Mock<ILogger<TemplateService>> _mockLogger;
 
         public TemplateServiceTests()
         {
@@ -30,7 +33,8 @@ namespace DocumentGenerator.Tests.Unit
             _mapper = config.CreateMapper();
 
             _mockDocumentService = new Mock<IDocumentService>();
-            _templateService = new TemplateService(_context, _mapper, _mockDocumentService.Object);
+            _mockLogger = new Mock<ILogger<TemplateService>>();
+            _templateService = new TemplateService(_context, _mapper, _mockDocumentService.Object, _mockLogger.Object);
         }
 
         [Fact]
@@ -73,7 +77,7 @@ namespace DocumentGenerator.Tests.Unit
             Func<Task> act = async () => await _templateService.CreateAsync(dto, userId);
 
             // Assert
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Invalid template syntax*");
+            await act.Should().ThrowAsync<TemplateCompilationException>().WithMessage("*Invalid template syntax*");
         }
     }
 }

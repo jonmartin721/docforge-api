@@ -22,17 +22,21 @@ namespace DocumentGenerator.Tests.Integration
             {
                 builder.ConfigureServices(services =>
                 {
-                    var descriptor = services.SingleOrDefault(
-                        d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+                    // Remove ALL EF Core related services to avoid provider conflicts
+                    var descriptorsToRemove = services
+                        .Where(d => d.ServiceType.FullName?.Contains("EntityFrameworkCore") == true ||
+                                    d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
+                                    d.ServiceType == typeof(ApplicationDbContext))
+                        .ToList();
 
-                    if (descriptor != null)
+                    foreach (var descriptor in descriptorsToRemove)
                     {
                         services.Remove(descriptor);
                     }
 
                     services.AddDbContext<ApplicationDbContext>(options =>
                     {
-                        options.UseInMemoryDatabase("InMemoryDbForTesting");
+                        options.UseInMemoryDatabase("InMemoryDbForDocumentFlowTesting");
                     });
 
                     var pdfServiceDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPdfService));
@@ -51,11 +55,12 @@ namespace DocumentGenerator.Tests.Integration
         [Fact]
         public async Task FullFlow_ShouldGenerateDocument()
         {
-            // 1. Register
+            // 1. Register with unique credentials to avoid conflicts
+            var uniqueId = Guid.NewGuid().ToString("N")[..8];
             var registerDto = new RegisterDto
             {
-                Username = "flowuser",
-                Email = "flow@example.com",
+                Username = $"flowuser_{uniqueId}",
+                Email = $"flow_{uniqueId}@example.com",
                 Password = "password123"
             };
             var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerDto);

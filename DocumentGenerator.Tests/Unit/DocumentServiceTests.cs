@@ -6,6 +6,7 @@ using DocumentGenerator.Infrastructure.Data;
 using DocumentGenerator.Infrastructure.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -17,8 +18,8 @@ namespace DocumentGenerator.Tests.Unit
         private readonly ApplicationDbContext _context;
         private readonly Mock<ITemplateService> _mockTemplateService;
         private readonly Mock<IPdfService> _mockPdfService;
-
         private readonly Mock<IMapper> _mockMapper;
+        private readonly Mock<ILogger<DocumentService>> _mockLogger;
 
         public DocumentServiceTests()
         {
@@ -30,8 +31,9 @@ namespace DocumentGenerator.Tests.Unit
             _mockTemplateService = new Mock<ITemplateService>();
             _mockPdfService = new Mock<IPdfService>();
             _mockMapper = new Mock<IMapper>();
+            _mockLogger = new Mock<ILogger<DocumentService>>();
 
-            _documentService = new DocumentService(_context, _mockPdfService.Object, _mockMapper.Object);
+            _documentService = new DocumentService(_context, _mockPdfService.Object, _mockMapper.Object, _mockLogger.Object);
         }
 
         public void Dispose()

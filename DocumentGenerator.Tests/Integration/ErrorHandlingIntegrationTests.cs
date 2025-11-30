@@ -21,17 +21,21 @@ namespace DocumentGenerator.Tests.Integration
             {
                 builder.ConfigureServices(services =>
                 {
-                    var descriptor = services.SingleOrDefault(
-                        d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+                    // Remove ALL EF Core related services to avoid provider conflicts
+                    var descriptorsToRemove = services
+                        .Where(d => d.ServiceType.FullName?.Contains("EntityFrameworkCore") == true ||
+                                    d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
+                                    d.ServiceType == typeof(ApplicationDbContext))
+                        .ToList();
 
-                    if (descriptor != null)
+                    foreach (var descriptor in descriptorsToRemove)
                     {
                         services.Remove(descriptor);
                     }
 
                     services.AddDbContext<ApplicationDbContext>(options =>
                     {
-                        options.UseInMemoryDatabase("InMemoryDbForTesting_Errors");
+                        options.UseInMemoryDatabase("InMemoryDbForErrorTesting");
                     });
                 });
             });

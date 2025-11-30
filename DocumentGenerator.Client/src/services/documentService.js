@@ -9,8 +9,14 @@ export const documentService = {
     return response.data;
   },
 
-  async getAll() {
-    const response = await api.get('/documents');
+  async getAll(page = 1, pageSize = 20) {
+    const response = await api.get('/documents', { params: { page, pageSize } });
+    // API returns paginated result: { items, page, pageSize, totalCount, totalPages }
+    return response.data.items || response.data;
+  },
+
+  async getAllPaginated(page = 1, pageSize = 20) {
+    const response = await api.get('/documents', { params: { page, pageSize } });
     return response.data;
   },
 

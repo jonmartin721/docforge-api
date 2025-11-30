@@ -1,8 +1,14 @@
 import api from './api';
 
 export const templateService = {
-  async getAll() {
-    const response = await api.get('/templates');
+  async getAll(page = 1, pageSize = 20) {
+    const response = await api.get('/templates', { params: { page, pageSize } });
+    // API returns paginated result: { items, page, pageSize, totalCount, totalPages }
+    return response.data.items || response.data;
+  },
+
+  async getAllPaginated(page = 1, pageSize = 20) {
+    const response = await api.get('/templates', { params: { page, pageSize } });
     return response.data;
   },
 
