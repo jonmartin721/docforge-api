@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using DocumentGenerator.Core.Exceptions;
 using FluentValidation;
 
 namespace DocumentGenerator.API.Middleware
@@ -40,6 +41,28 @@ namespace DocumentGenerator.API.Middleware
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     response.Message = "Validation Failed";
                     response.Errors = validationEx.Errors.Select(e => e.ErrorMessage).ToList();
+                    break;
+
+                case DuplicateUsernameException:
+                case DuplicateEmailException:
+                    context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    response.Message = exception.Message;
+                    break;
+
+                case InvalidCredentialsException:
+                case InvalidRefreshTokenException:
+                    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                    response.Message = exception.Message;
+                    break;
+
+                case TemplateCompilationException:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    response.Message = exception.Message;
+                    break;
+
+                case UnauthorizedResourceAccessException:
+                    context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    response.Message = exception.Message;
                     break;
 
                 case KeyNotFoundException:

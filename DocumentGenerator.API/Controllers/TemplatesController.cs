@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -21,10 +20,13 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<TemplateDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<TemplateDto>>> GetAll()
+        [ProducesResponseType(typeof(PaginatedResult<TemplateDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<PaginatedResult<TemplateDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            return Ok(await _templateService.GetAllAsync());
+            var userId = this.GetUserId();
+            return Ok(await _templateService.GetAllAsync(userId, page, pageSize));
         }
 
         [HttpGet("{id}")]
@@ -32,7 +34,8 @@ namespace DocumentGenerator.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TemplateDto>> GetById(Guid id)
         {
-            var template = await _templateService.GetByIdAsync(id);
+            var userId = this.GetUserId();
+            var template = await _templateService.GetByIdAsync(id, userId);
             if (template == null) return NotFound();
             return Ok(template);
         }
@@ -53,7 +56,8 @@ namespace DocumentGenerator.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TemplateDto>> Update(Guid id, UpdateTemplateDto updateDto)
         {
-            var template = await _templateService.UpdateAsync(id, updateDto);
+            var userId = this.GetUserId();
+            var template = await _templateService.UpdateAsync(id, updateDto, userId);
             if (template == null) return NotFound();
             return Ok(template);
         }
@@ -63,7 +67,8 @@ namespace DocumentGenerator.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> Delete(Guid id)
         {
-            var result = await _templateService.DeleteAsync(id);
+            var userId = this.GetUserId();
+            var result = await _templateService.DeleteAsync(id, userId);
             if (!result) return NotFound();
             return NoContent();
         }

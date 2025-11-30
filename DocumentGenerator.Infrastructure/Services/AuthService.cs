@@ -1,12 +1,15 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using DocumentGenerator.Core.Constants;
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Entities;
+using DocumentGenerator.Core.Exceptions;
 using DocumentGenerator.Core.Interfaces;
 using DocumentGenerator.Core.Settings;
 using DocumentGenerator.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -16,20 +19,22 @@ namespace DocumentGenerator.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly JwtSettings _jwtSettings;
+        private readonly ILogger<AuthService> _logger;
 
-        public AuthService(ApplicationDbContext context, IOptions<JwtSettings> jwtSettings)
+        public AuthService(ApplicationDbContext context, IOptions<JwtSettings> jwtSettings, ILogger<AuthService> logger)
         {
             _context = context;
             _jwtSettings = jwtSettings.Value;
+            _logger = logger;
         }
 
         public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto)
         {
             if (await _context.Users.AnyAsync(u => u.Username == registerDto.Username))
-                throw new Exception("Username already exists");
+                throw new DuplicateUsernameException(registerDto.Username);
 
             if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
-                throw new Exception("Email already exists");
+                throw new DuplicateEmailException(registerDto.Email);
 
             var user = new User
             {
@@ -37,12 +42,13 @@ namespace DocumentGenerator.Infrastructure.Services
                 Username = registerDto.Username,
                 Email = registerDto.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
-                Role = "User"
+                Role = Roles.User
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("User registered successfully: {Username}", registerDto.Username);
             return GenerateAuthResponse(user);
         }
 
@@ -51,19 +57,26 @@ namespace DocumentGenerator.Infrastructure.Services
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
-                throw new Exception("Invalid credentials");
+            {
+                _logger.LogWarning("Failed login attempt for username: {Username}", loginDto.Username);
+                throw new InvalidCredentialsException();
+            }
 
+            _logger.LogInformation("User logged in successfully: {Username}", loginDto.Username);
             return GenerateAuthResponse(user);
         }
 
         public async Task<AuthResponseDto> RefreshTokenAsync(string token, string refreshToken)
         {
-            // Simple implementation for now, would need more robust validation in production
             var user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
 
             if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
-                throw new Exception("Invalid refresh token");
+            {
+                _logger.LogWarning("Invalid refresh token attempt");
+                throw new InvalidRefreshTokenException();
+            }
 
+            _logger.LogInformation("Token refreshed for user: {Username}", user.Username);
             return GenerateAuthResponse(user);
         }
 

@@ -6,7 +6,7 @@ namespace DocumentGenerator.Core.Interfaces
     {
         Task<DocumentDto> GenerateDocumentAsync(GenerationRequestDto request, Guid userId);
         Task<DocumentDto?> GetByIdAsync(Guid id, Guid userId);
-        Task<IEnumerable<DocumentDto>> GetAllAsync(Guid userId);
+        Task<PaginatedResult<DocumentDto>> GetAllAsync(Guid userId, int page = 1, int pageSize = 20);
         Task<(byte[] FileData, string FileName)?> GetDocumentFileAsync(Guid id, Guid userId);
         Task<bool> DeleteAsync(Guid id, Guid userId);
         Task DeleteByTemplateIdAsync(Guid templateId);

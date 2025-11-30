@@ -5,6 +5,7 @@ using DocumentGenerator.Core.Interfaces;
 using DocumentGenerator.Infrastructure.Data;
 using HandlebarsDotNet;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace DocumentGenerator.Infrastructure.Services
@@ -14,13 +15,19 @@ namespace DocumentGenerator.Infrastructure.Services
         private readonly ApplicationDbContext _context;
         private readonly IPdfService _pdfService;
         private readonly IMapper _mapper;
+        private readonly ILogger<DocumentService> _logger;
         private readonly string _storagePath;
 
-        public DocumentService(ApplicationDbContext context, IPdfService pdfService, IMapper mapper)
+        public DocumentService(
+            ApplicationDbContext context,
+            IPdfService pdfService,
+            IMapper mapper,
+            ILogger<DocumentService> logger)
         {
             _context = context;
             _pdfService = pdfService;
             _mapper = mapper;
+            _logger = logger;
             _storagePath = Path.Combine(Directory.GetCurrentDirectory(), "GeneratedDocuments");
             if (!Directory.Exists(_storagePath))
             {
@@ -32,7 +39,12 @@ namespace DocumentGenerator.Infrastructure.Services
         {
             var template = await _context.Templates.FindAsync(request.TemplateId);
             if (template == null)
+            {
+                _logger.LogWarning("Template {TemplateId} not found for document generation", request.TemplateId);
                 throw new KeyNotFoundException("Template not found");
+            }
+
+            _logger.LogInformation("Generating document from template {TemplateId} for user {UserId}", request.TemplateId, userId);
 
             // 1. Compile Handlebars
             var compiledTemplate = Handlebars.Compile(template.Content);
@@ -64,6 +76,7 @@ namespace DocumentGenerator.Infrastructure.Services
             dto.TemplateName = template.Name;
             dto.DownloadUrl = $"/api/documents/{document.Id}/download";
 
+            _logger.LogInformation("Document {DocumentId} generated successfully ({Size} bytes)", document.Id, pdfBytes.Length);
             return dto;
         }
 
@@ -82,21 +95,29 @@ namespace DocumentGenerator.Infrastructure.Services
             return dto;
         }
 
-        public async Task<IEnumerable<DocumentDto>> GetAllAsync(Guid userId)
+        public async Task<PaginatedResult<DocumentDto>> GetAllAsync(Guid userId, int page = 1, int pageSize = 20)
         {
-            var documents = await _context.Documents
+            var query = _context.Documents
                 .Include(d => d.Template)
-                .Where(d => d.UserId == userId)
+                .Where(d => d.UserId == userId);
+
+            var totalCount = await query.CountAsync();
+            var documents = await query
                 .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            return documents.Select(doc =>
+            var items = documents.Select(doc =>
             {
                 var dto = _mapper.Map<DocumentDto>(doc);
                 dto.TemplateName = doc.Template?.Name ?? "Unknown";
                 dto.DownloadUrl = $"/api/documents/{doc.Id}/download";
                 return dto;
             });
+
+            _logger.LogDebug("Retrieved {Count} documents for user {UserId} (page {Page})", documents.Count, userId, page);
+            return PaginatedResult<DocumentDto>.Create(items, totalCount, page, pageSize);
         }
 
         public async Task<(byte[] FileData, string FileName)?> GetDocumentFileAsync(Guid id, Guid userId)
@@ -114,12 +135,18 @@ namespace DocumentGenerator.Infrastructure.Services
         public async Task<bool> DeleteAsync(Guid id, Guid userId)
         {
             var document = await _context.Documents.FindAsync(id);
-            if (document == null || document.UserId != userId) return false;
+            if (document == null || document.UserId != userId)
+            {
+                _logger.LogDebug("Document {DocumentId} not found or not owned by user {UserId} for deletion", id, userId);
+                return false;
+            }
 
             DeleteFileIfExists(document.StoragePath);
 
             _context.Documents.Remove(document);
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Document {DocumentId} deleted by user {UserId}", id, userId);
             return true;
         }
 
@@ -136,7 +163,10 @@ namespace DocumentGenerator.Infrastructure.Services
             }
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Deleted {Count} documents for template {TemplateId}", documents.Count, templateId);
         }
+
         private void DeleteFileIfExists(string path)
         {
             if (File.Exists(path))
@@ -145,9 +175,9 @@ namespace DocumentGenerator.Infrastructure.Services
                 {
                     File.Delete(path);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Log error or ignore if file deletion fails
+                    _logger.LogWarning(ex, "Failed to delete file at path: {Path}", path);
                 }
             }
         }

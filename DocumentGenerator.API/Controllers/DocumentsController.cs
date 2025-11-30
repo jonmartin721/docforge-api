@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -32,11 +31,13 @@ namespace DocumentGenerator.API.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<DocumentDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<DocumentDto>>> GetAll()
+        [ProducesResponseType(typeof(PaginatedResult<DocumentDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<PaginatedResult<DocumentDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             var userId = this.GetUserId();
-            return Ok(await _documentService.GetAllAsync(userId));
+            return Ok(await _documentService.GetAllAsync(userId, page, pageSize));
         }
 
         [HttpGet("{id}")]
@@ -67,7 +68,7 @@ namespace DocumentGenerator.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> Delete(Guid id)
         {
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            var userId = this.GetUserId();
             var result = await _documentService.DeleteAsync(id, userId);
             if (!result) return NotFound();
             return NoContent();
