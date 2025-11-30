@@ -1,5 +1,9 @@
 # DocForge
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+
 Stop fighting with PDF libraries. Write HTML templates, get PDFs back.
 
 DocForge is a .NET 8 API + React frontend for generating PDFs from templates. You write HTML with Handlebars variables, POST your JSON data, get a PDF. That's it.
@@ -67,90 +71,9 @@ curl -X POST http://localhost:5257/api/documents/generate \
 
 ## What it looks like
 
-(Need to grab a screenshot of the visual editor here - drag/drop in action)
+<!-- TODO: Add screenshot/GIF of visual editor -->
 
-## Super Quick Start (TUI)
-
-We have a text-based user interface to help you manage everything.
-
-```bash
-# Linux / macOS / WSL
-# First time only: make scripts executable
-chmod +x docforge.sh scripts/setup-linux.sh
-
-# Run the TUI
-./docforge.sh
-
-# Windows (PowerShell)
-.\docforge.ps1
-```
-
-### TUI Menu Options
-
-The TUI provides an interactive menu with the following options:
-
-**🔧 Setup & Dependencies**
-- Install .NET 8 SDK
-- Install Node.js and npm
-- Install Chrome/Chromium for PDF generation (Linux/WSL)
-- Setup development environment
-
-**🚀 Development**
-- Start Backend API (.NET)
-- Start Frontend (React/Vite)
-- Start Both Services (recommended)
-- Stop All Services
-
-**🧪 Testing**
-- Run Backend Tests
-- Run Frontend Tests
-- Run All Tests with Coverage
-- Test Report Generation
-
-**📦 Database**
-- Initialize Database
-- Reset Database (development only)
-- View Database Status
-- Migrate Database (production)
-
-**🐳 Docker**
-- Build Docker Image
-- Run with Docker Compose
-- Stop Docker Services
-- Clean Docker Resources
-
-**📊 Project Management**
-- View Project Status
-- Check Dependencies
-- Clean Build Artifacts
-- Generate Documentation
-
-**❓ Help & Info**
-- Show Port Information
-- Display API Endpoints
-- View Configuration Guide
-- About DocForge
-
-### Platform-Specific Setup
-
-**Linux / WSL Requirements:**
-```bash
-# Run this once to install PDF generation dependencies
-sudo ./scripts/setup-linux.sh
-```
-This installs Chrome/Chromium and required libraries for PuppeteerSharp.
-
-**Windows Requirements:**
-- PowerShell 5.1+
-- Windows 10/11 with Microsoft Edge (Chrome-based)
-- No additional setup required for PDF generation
-
-**macOS Requirements:**
-- macOS 10.15+ with Safari 13+
-- Google Chrome recommended for PDF generation
-- Homebrew for dependency management
-
-## Quick Start (Manual)
+## Quick Start
 
 (Requires Docker OR .NET 8 SDK + Node.js 18+)
 
@@ -168,79 +91,33 @@ npm run dev
 
 Then open:
 - **Frontend**: http://localhost:5173
-- **API**: http://localhost:5000/swagger (Docker exposes API on port 5000)
+- **API**: http://localhost:5000/swagger
 
-### Docker Configuration Details
+See [docs/DOCKER.md](docs/DOCKER.md) for volume mounts, environment variables, and production setup.
 
-**Container Setup:**
-- **Image**: `documentgenerator-api` (built from source)
-- **Port Mapping**: `5000:8080` (external:internal)
-- **Environment**: Development mode
-- **Database**: SQLite with persistent storage
-
-**Volume Mounts:**
-```yaml
-volumes:
-  - ./data:/app/data              # Database persistence
-  - ./GeneratedDocuments:/app/GeneratedDocuments  # PDF output
-```
-
-**Chrome Dependencies:**
-The Dockerfile includes PuppeteerSharp Chrome dependencies:
-```dockerfile
-# Install Chrome dependencies for PuppeteerSharp
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-```
-
-**Environment Variables in Docker:**
-The container uses the same `.env` file configuration. Create a `.env` file before running:
+**Without Docker** (local development):
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-**Data Persistence:**
-- **Database**: Stored in `./data/documentgenerator.db`
-- **Generated PDFs**: Stored in `./GeneratedDocuments/`
-- Both directories are automatically created if they don't exist
-
-**Production Docker Usage:**
-```bash
-# For production, build and run with production settings
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Linux / WSL Setup
-If running locally on Linux or WSL, you need to install dependencies for the PDF generator (Chrome/Puppeteer).
-
-Run the setup script:
-```bash
+# Linux/WSL only: install Chrome dependencies first
 sudo ./scripts/setup-linux.sh
-```
 
-**Local development** (without Docker):
-```bash
-# Backend (runs on port 5257)
+# Backend (port 5257)
 dotnet run --project DocumentGenerator.API
 
-# Frontend (separate terminal)
-cd DocumentGenerator.Client
-npm install
-npm run dev
+# Frontend (separate terminal, port 5173)
+cd DocumentGenerator.Client && npm install && npm run dev
 ```
 
-Then open:
-- **Frontend**: http://localhost:5173
-- **API**: http://localhost:5257/swagger (local dev runs on port 5257)
+### Guided Setup (TUI)
 
-**Port Reference:**
-- **Local API**: `localhost:5257` (development)
-- **Docker API**: `localhost:5000` (container)
-- **Frontend**: `localhost:5173` (Vite dev server)
+Prefer a guided setup? We have a TUI that handles dependencies, services, testing, and Docker:
+
+```bash
+# Linux/macOS/WSL
+chmod +x docforge.sh && ./docforge.sh
+
+# Windows (PowerShell)
+.\docforge.ps1
+```
 
 ## Features
 
@@ -323,108 +200,15 @@ Test your templates in the frontend editor first - it catches syntax errors befo
 
 ## API Endpoints
 
-### Authentication (`/api/auth`)
-```http
-POST /api/auth/register
-Content-Type: application/json
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/auth/register` | POST | No | Create account |
+| `/api/auth/login` | POST | No | Get JWT token |
+| `/api/templates` | CRUD | Yes | Manage templates |
+| `/api/documents/generate` | POST | Yes | Create PDF from template |
+| `/api/documents/{id}/download` | GET | Yes | Download generated PDF |
 
-{
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-```
-
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-```
-
-Both endpoints return `AuthResponseDto` with JWT and refresh tokens.
-
-### Documents (`/api/documents`) - **Authentication Required**
-```http
-POST /api/documents/generate
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-
-{
-  "templateId": "template-guid",
-  "data": {
-    "invoiceNumber": "INV-2024-001",
-    "customerName": "Acme Corp",
-    "total": "250.00"
-  }
-}
-```
-
-```http
-GET /api/documents
-Authorization: Bearer {jwt_token}
-```
-
-```http
-GET /api/documents/{id}
-Authorization: Bearer {jwt_token}
-```
-
-```http
-GET /api/documents/{id}/download
-Authorization: Bearer {jwt_token}
-```
-
-```http
-DELETE /api/documents/{id}
-Authorization: Bearer {jwt_token}
-```
-
-### Templates (`/api/templates`) - **Authentication Required**
-```http
-GET /api/templates
-Authorization: Bearer {jwt_token}
-```
-
-```http
-GET /api/templates/{id}
-Authorization: Bearer {jwt_token}
-```
-
-```http
-POST /api/templates
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-
-{
-  "name": "Invoice Template",
-  "description": "Standard invoice layout",
-  "htmlContent": "<h1>Invoice #{{invoiceNumber}}</h1>",
-  "styles": "h1 { color: blue; }"
-}
-```
-
-```http
-PUT /api/templates/{id}
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-
-{
-  "name": "Updated Invoice Template",
-  "description": "Updated description",
-  "htmlContent": "<h1>Invoice #{{invoiceNumber}}</h1>",
-  "styles": "h1 { color: green; }"
-}
-```
-
-```http
-DELETE /api/templates/{id}
-Authorization: Bearer {jwt_token}
-```
-
-**Interactive Documentation**: Available at `/swagger` when running the application.
+**Full API docs:** Available at `/swagger` when running.
 
 ## Environment Configuration
 
@@ -464,9 +248,12 @@ ASPNETCORE_ENVIRONMENT=Development
 
 ## Learn More
 
-- 📖 **API Documentation** - Available at `/swagger` when running the application
-- 🎨 **Template Examples** - Check `DocumentGenerator.Client` for sample templates
-- 🏗️ **Architecture** - .NET 8 API + React frontend, uses PuppeteerSharp for PDF rendering
+- 📖 **API Documentation** - Available at `/swagger` when running
+- 🎨 **Template Examples** - See [`DocumentGenerator.Client/src/`](DocumentGenerator.Client/src/) for the visual editor
+- 🐳 **Docker Setup** - See [`docs/DOCKER.md`](docs/DOCKER.md) for container configuration
+- 🏗️ **Architecture** - Clean architecture with .NET 8 API + React frontend
+
+**Getting Help:** Open an issue at [github.com/jonmartin721/docforge-api/issues](https://github.com/jonmartin721/docforge-api/issues)
 
 ## Testing
 
