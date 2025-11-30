@@ -35,7 +35,6 @@
         "git",
         "dotnet-8",
         "nodejs",
-        "chrome",
         "vscode",
         "docker"
       ]
@@ -85,8 +84,7 @@
       "dependencies": [
         "git",
         "dotnet-8",
-        "nodejs",
-        "chrome"
+        "nodejs"
       ],
       "optionalDependencies": [
         "docker",
@@ -94,7 +92,6 @@
       ],
       "installSequence": [
         "git",
-        "chrome",
         "dotnet-8",
         "nodejs",
         "vscode",
@@ -123,8 +120,7 @@
       "dependencies": [
         "git",
         "dotnet-8",
-        "nodejs",
-        "chrome"
+        "nodejs"
       ],
       "optionalDependencies": [
         "docker",
@@ -132,7 +128,6 @@
       ],
       "installSequence": [
         "git",
-        "chrome",
         "dotnet-8",
         "nodejs",
         "vscode",

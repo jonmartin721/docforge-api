@@ -55,9 +55,16 @@ function Write-Info {
 }
 
 function Write-ProgressStatus {
-    param([string]$Message, [int]$PercentComplete = 0)
+    param([string]$Message)
     if (-not $Quiet) {
-        Write-Host "[PROGRESS] $Message ($PercentComplete%)" -ForegroundColor Gray
+        Write-Host $Message -ForegroundColor Gray -NoNewline
+        Write-Host "`r" -NoNewline
+    }
+}
+
+function Clear-ProgressLine {
+    if (-not $Quiet) {
+        Write-Host ("`r" + (" " * 60) + "`r") -NoNewline
     }
 }
 
@@ -68,7 +75,7 @@ function Test-Dependency {
         [object]$Dependency
     )
 
-    Write-ProgressStatus "Checking $($Dependency.name)..." -PercentComplete 0
+    Write-ProgressStatus "Checking $($Dependency.name)..."
 
     try {
         $windowsConfig = $Dependency.windows
@@ -86,6 +93,7 @@ function Test-Dependency {
             $isValidVersion = Test-VersionRequirement $version $Dependency.version $Dependency.minVersion
 
             if ($isValidVersion) {
+                Clear-ProgressLine
                 Write-Success "[OK] $($Dependency.name) ($version)"
                 return @{
                     Status = "OK";
@@ -93,6 +101,7 @@ function Test-Dependency {
                     Message = "Installed and valid"
                 }
             } else {
+                Clear-ProgressLine
                 Write-Warning "[WARN] $($Dependency.name) ($version) - version incompatible"
                 return @{
                     Status = "WRONG_VERSION";
@@ -101,6 +110,7 @@ function Test-Dependency {
                 }
             }
         } else {
+            Clear-ProgressLine
             Write-Error "[MISSING] $($Dependency.name) - not found"
             return @{
                 Status = "MISSING";
@@ -110,6 +120,7 @@ function Test-Dependency {
         }
     }
     catch {
+        Clear-ProgressLine
         Write-Error "[ERROR] $($Dependency.name) - check failed: $($_.Exception.Message)"
         return @{
             Status = "ERROR";
@@ -205,7 +216,7 @@ function Install-Dependency {
         }
 
         # Execute installation
-        Write-ProgressStatus "Installing $($Dependency.name)..." -PercentComplete 50
+        Write-ProgressStatus "Installing $($Dependency.name)..."
         $result = Invoke-Expression $installCommand
 
         if ($null -eq $LASTEXITCODE -or $LASTEXITCODE -eq 0) {
@@ -374,21 +385,13 @@ function Main {
         @($DependencyId)
     }
 
-    $depCount = $depsToCheck.Count
-    $current = 0
-
     foreach ($depId in $depsToCheck) {
-        $current++
-        $progressPercent = [math]::Round(($current / $depCount) * 100)
-
         if (-not $DependenciesConfig.dependencies.PSObject.Properties.Name -contains $depId) {
             Write-Warning "Unknown dependency: $depId"
             continue
         }
 
         $dependency = $DependenciesConfig.dependencies.$depId
-        Write-ProgressStatus "Checking $($dependency.name)..." -PercentComplete $progressPercent
-
         $status = Test-Dependency $depId $dependency
         $results[$depId] = $status
 
@@ -399,8 +402,6 @@ function Main {
             }
         }
     }
-
-    Write-ProgressStatus "Complete" -PercentComplete 100
 
     # Show summary
     if (-not $Quiet) {

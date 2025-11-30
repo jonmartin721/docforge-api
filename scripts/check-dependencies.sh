@@ -43,8 +43,13 @@ write_info() {
 write_progress() {
     if [[ "${QUIET:-0}" != "1" ]]; then
         local percent=${2:-0}
-        echo -ne "${BLUE}$1... (${percent}%)${NC}\r"
+        echo -ne "${BLUE}$1... ${NC}\r"
     fi
+}
+
+# Clear the current line (used after write_progress)
+clear_line() {
+    [[ "${QUIET:-0}" != "1" ]] && echo -ne "\033[2K\r"
 }
 
 # Configuration
@@ -245,15 +250,18 @@ check_dependency() {
         if validate_version_requirement "$version" "$version_pattern" "$min_version"; then
             status="OK"
             message="Installed and valid"
+            clear_line >&2
             write_success "$dep_name ($version)" >&2
         else
             status="WRONG_VERSION"
             message="Version incompatible"
+            clear_line >&2
             write_warning "$dep_name ($version) - version incompatible" >&2
         fi
     else
         status="MISSING"
         message="Not installed"
+        clear_line >&2
         write_error "$dep_name - not found" >&2
     fi
 
@@ -491,25 +499,17 @@ main() {
             done <<< "$jq_output"
         else
             # Fallback dependencies
-            deps_to_check=("git" "dotnet-8" "nodejs" "chrome")
+            deps_to_check=("git" "dotnet-8" "nodejs")
         fi
     fi
 
-    local dep_count=${#deps_to_check[@]}
-    local current=0
-
     # Check each dependency
     for dep_id in "${deps_to_check[@]}"; do
-        ((current++))
-        local progress=$(( current * 100 / dep_count ))
-
         # Get dependency name from JSON or use dep_id as fallback
         local dep_name="$dep_id"
         if command -v jq >/dev/null 2>&1; then
             dep_name=$(jq -r ".dependencies.\"$dep_id\".name // \"$dep_id\"" "$DEPENDENCIES_FILE" 2>/dev/null || echo "$dep_id")
         fi
-
-        write_progress "Checking $dep_name" $progress >&2
 
         # Check dependency
         local check_result=$(check_dependency "$dep_id" "$dep_name" "$platform" "$package_manager")
@@ -526,9 +526,6 @@ main() {
             fi
         fi
     done
-
-    write_progress "Complete" 100 >&2
-    echo
 
     # Show summary
     if [[ "${QUIET:-0}" != "1" ]]; then
