@@ -1,0 +1,5 @@
+# Frontend linting
+cd DocumentGenerator.Client && npm run lint
+
+# Backend formatting check
+cd .. && dotnet format --verify-no-changes --verbosity minimal
