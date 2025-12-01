@@ -69,13 +69,7 @@ curl -X POST http://localhost:5257/api/documents/generate \
 
 **Result:** A formatted PDF invoice in the response.
 
-## What it looks like
-
 ![Dashboard](docs/images/dashboard.png)
-
-![Documents list](docs/images/documents.png)
-
-![Template editor](docs/images/editor.png)
 
 ## Quick Start
 
@@ -122,6 +116,8 @@ chmod +x docforge.sh && ./docforge.sh
 # Windows (PowerShell)
 .\docforge.ps1
 ```
+
+![TUI menu](docs/images/tui-menu.png)
 
 ## Features
 
@@ -178,6 +174,8 @@ Customer: Acme Corp
 ```
 
 Test your templates in the frontend editor first - it catches syntax errors before you hit the API.
+
+![Template creation](docs/images/template-creation.png)
 
 ## Tech Stack
 
