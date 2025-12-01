@@ -9,6 +9,14 @@ export const documentService = {
     return response.data;
   },
 
+  async generateBatch(templateId, dataItems) {
+    const response = await api.post('/documents/generate-batch', {
+      templateId,
+      dataItems,
+    });
+    return response.data;
+  },
+
   async getAll(page = 1, pageSize = 20) {
     const response = await api.get('/documents', { params: { page, pageSize } });
     // API returns paginated result: { items, page, pageSize, totalCount, totalPages }

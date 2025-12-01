@@ -71,7 +71,11 @@ curl -X POST http://localhost:5257/api/documents/generate \
 
 ## What it looks like
 
-<!-- TODO: Add screenshot/GIF of visual editor -->
+![Dashboard](docs/images/dashboard.png)
+
+![Documents list](docs/images/documents.png)
+
+![Template editor](docs/images/editor.png)
 
 ## Quick Start
 
@@ -206,6 +210,7 @@ Test your templates in the frontend editor first - it catches syntax errors befo
 | `/api/auth/login` | POST | No | Get JWT token |
 | `/api/templates` | CRUD | Yes | Manage templates |
 | `/api/documents/generate` | POST | Yes | Create PDF from template |
+| `/api/documents/generate-batch` | POST | Yes | Create multiple PDFs from one template |
 | `/api/documents/{id}/download` | GET | Yes | Download generated PDF |
 
 **Full API docs:** Available at `/swagger` when running.
@@ -333,17 +338,21 @@ cd DocumentGenerator.Client && npm test
 - FluentValidation prevents injection attacks
 - CORS properly configured for local dev
 
+## Known Issues
+
+See [open issues](https://github.com/jonmartin721/docforge-api/issues) for current bugs and areas that need testing. If you run into problems, please open an issue - it helps improve the project.
+
 ## Roadmap
 
-Things I might add:
+Planned features (contributions welcome):
 - Template versioning (save history)
-- Bulk generation (process 100s of PDFs from a CSV)
+- ~~Bulk generation (process 100s of PDFs from a CSV)~~ - Done! Use `/api/documents/generate-batch`
 - Cloud storage (S3/Azure instead of local disk)
 - Template sharing (if there's interest)
 
 ## Contributing
 
-This is a portfolio project, but I'm happy to review PRs!
+PRs are welcome and will be reviewed promptly.
 
 **Quick contribution ideas:**
 - Add template examples (invoices, tickets, certificates)

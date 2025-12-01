@@ -80,6 +80,76 @@ namespace DocumentGenerator.Infrastructure.Services
             return dto;
         }
 
+        public async Task<BatchGenerationResultDto> GenerateDocumentBatchAsync(BatchGenerationRequestDto request, Guid userId)
+        {
+            var result = new BatchGenerationResultDto
+            {
+                TotalRequested = request.DataItems.Count
+            };
+
+            var template = await _context.Templates.FindAsync(request.TemplateId);
+            if (template == null)
+            {
+                _logger.LogWarning("Template {TemplateId} not found for batch document generation", request.TemplateId);
+                throw new KeyNotFoundException("Template not found");
+            }
+
+            _logger.LogInformation("Starting batch generation of {Count} documents from template {TemplateId} for user {UserId}",
+                request.DataItems.Count, request.TemplateId, userId);
+
+            var compiledTemplate = Handlebars.Compile(template.Content);
+
+            for (int i = 0; i < request.DataItems.Count; i++)
+            {
+                try
+                {
+                    var data = request.DataItems[i];
+                    var htmlContent = compiledTemplate(data);
+                    var pdfBytes = await _pdfService.GeneratePdfAsync(htmlContent);
+
+                    var fileName = $"doc-{Guid.NewGuid()}.pdf";
+                    var filePath = Path.Combine(_storagePath, fileName);
+                    await File.WriteAllBytesAsync(filePath, pdfBytes);
+
+                    var document = new Document
+                    {
+                        Id = Guid.NewGuid(),
+                        TemplateId = template.Id,
+                        UserId = userId,
+                        StoragePath = filePath,
+                        GeneratedAt = DateTime.UtcNow,
+                        Metadata = JsonSerializer.Serialize(data)
+                    };
+
+                    _context.Documents.Add(document);
+
+                    var dto = _mapper.Map<DocumentDto>(document);
+                    dto.TemplateName = template.Name;
+                    dto.DownloadUrl = $"/api/documents/{document.Id}/download";
+
+                    result.Documents.Add(dto);
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate document at index {Index} in batch", i);
+                    result.Errors.Add(new BatchGenerationError
+                    {
+                        Index = i,
+                        Message = ex.Message
+                    });
+                    result.FailureCount++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Batch generation completed: {Success} succeeded, {Failed} failed",
+                result.SuccessCount, result.FailureCount);
+
+            return result;
+        }
+
         public async Task<DocumentDto?> GetByIdAsync(Guid id, Guid userId)
         {
             var document = await _context.Documents

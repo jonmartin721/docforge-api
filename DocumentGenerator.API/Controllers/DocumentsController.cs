@@ -30,6 +30,17 @@ namespace DocumentGenerator.API.Controllers
             return Ok(document);
         }
 
+        [HttpPost("generate-batch")]
+        [ProducesResponseType(typeof(BatchGenerationResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<BatchGenerationResultDto>> GenerateBatch(BatchGenerationRequestDto request)
+        {
+            var userId = this.GetUserId();
+            var result = await _documentService.GenerateDocumentBatchAsync(request, userId);
+            return Ok(result);
+        }
+
         [HttpGet]
         [ProducesResponseType(typeof(PaginatedResult<DocumentDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<PaginatedResult<DocumentDto>>> GetAll(
