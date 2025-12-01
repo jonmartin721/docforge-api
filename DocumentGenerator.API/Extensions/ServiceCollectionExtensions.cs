@@ -24,6 +24,9 @@ namespace DocumentGenerator.API.Extensions
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
 
+            // Storage Settings
+            services.Configure<StorageSettings>(configuration.GetSection("Storage"));
+
             // Authentication
             services.AddAuthentication(options =>
             {
@@ -40,7 +43,8 @@ namespace DocumentGenerator.API.Extensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtSettings?.Issuer,
                     ValidAudience = jwtSettings?.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Secret ?? throw new InvalidOperationException("JWT Secret is missing")))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Secret ?? throw new InvalidOperationException("JWT Secret is missing"))),
+                    ClockSkew = TimeSpan.FromMinutes(1)
                 };
             });
 
@@ -54,6 +58,7 @@ namespace DocumentGenerator.API.Extensions
             services.AddScoped<ITemplateService, TemplateService>();
             services.AddScoped<IDocumentService, DocumentService>();
             services.AddSingleton<IPdfService, PdfService>();
+            services.AddHostedService<OrphanCleanupService>();
 
             // AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

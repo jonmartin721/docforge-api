@@ -25,6 +25,10 @@ namespace DocumentGenerator.API.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
+            // Enforce pagination bounds
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
             var userId = this.GetUserId();
             return Ok(await _templateService.GetAllAsync(userId, page, pageSize));
         }

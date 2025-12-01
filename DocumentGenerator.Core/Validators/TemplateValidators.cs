@@ -13,17 +13,18 @@ namespace DocumentGenerator.Core.Validators
 
             RuleFor(x => x.Content)
                 .NotEmpty().WithMessage("Template content is required")
+                .MaximumLength(1_000_000).WithMessage("Template content exceeds maximum size (1MB)")
                 .Must(BeValidHandlebars).WithMessage("Invalid Handlebars syntax");
         }
 
-        private bool BeValidHandlebars(string content)
+        private static bool BeValidHandlebars(string content)
         {
             try
             {
                 Handlebars.Compile(content);
                 return true;
             }
-            catch
+            catch (HandlebarsException)
             {
                 return false;
             }
@@ -35,19 +36,23 @@ namespace DocumentGenerator.Core.Validators
         public UpdateTemplateDtoValidator()
         {
             RuleFor(x => x.Content)
-                .Must(BeValidHandlebars)
+                .MaximumLength(1_000_000).WithMessage("Template content exceeds maximum size (1MB)")
+                .When(x => !string.IsNullOrEmpty(x.Content));
+
+            RuleFor(x => x.Content)
+                .Must(BeValidHandlebars!)
                 .When(x => !string.IsNullOrEmpty(x.Content))
                 .WithMessage("Invalid Handlebars syntax");
         }
 
-        private bool BeValidHandlebars(string content)
+        private static bool BeValidHandlebars(string content)
         {
             try
             {
                 Handlebars.Compile(content);
                 return true;
             }
-            catch
+            catch (HandlebarsException)
             {
                 return false;
             }

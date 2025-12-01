@@ -2,11 +2,13 @@ using AutoMapper;
 using DocumentGenerator.Core.DTOs;
 using DocumentGenerator.Core.Entities;
 using DocumentGenerator.Core.Interfaces;
+using DocumentGenerator.Core.Settings;
 using DocumentGenerator.Infrastructure.Data;
 using DocumentGenerator.Infrastructure.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -33,7 +35,9 @@ namespace DocumentGenerator.Tests.Unit
             _mockMapper = new Mock<IMapper>();
             _mockLogger = new Mock<ILogger<DocumentService>>();
 
-            _documentService = new DocumentService(_context, _mockPdfService.Object, _mockMapper.Object, _mockLogger.Object);
+            var storageSettings = Options.Create(new StorageSettings { DocumentsPath = Path.Combine(Path.GetTempPath(), "TestDocs_" + Guid.NewGuid()) });
+
+            _documentService = new DocumentService(_context, _mockPdfService.Object, _mockMapper.Object, _mockLogger.Object, storageSettings);
         }
 
         public void Dispose()

@@ -31,6 +31,7 @@ namespace DocumentGenerator.Core.DTOs
 
         [Required]
         [MinLength(1, ErrorMessage = "At least one data item is required")]
+        [MaxLength(100, ErrorMessage = "Batch size cannot exceed 100 items")]
         public List<object> DataItems { get; set; } = new();
     }
 
