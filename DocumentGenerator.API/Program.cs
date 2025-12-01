@@ -18,7 +18,12 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // 2. Add Services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Ensure DateTimes are serialized with UTC "Z" suffix
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddInfrastructure(builder.Configuration);
