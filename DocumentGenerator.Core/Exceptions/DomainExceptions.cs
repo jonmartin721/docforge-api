@@ -34,6 +34,23 @@ namespace DocumentGenerator.Core.Exceptions
     }
 
     /// <summary>
+    /// Thrown when an account is locked due to too many failed login attempts.
+    /// </summary>
+    public class AccountLockedException : Exception
+    {
+        public DateTime? LockoutEnd { get; }
+
+        public AccountLockedException()
+            : base("Account is locked due to too many failed login attempts") { }
+
+        public AccountLockedException(DateTime lockoutEnd)
+            : base($"Account is locked until {lockoutEnd:u}")
+        {
+            LockoutEnd = lockoutEnd;
+        }
+    }
+
+    /// <summary>
     /// Thrown when a refresh token is invalid or expired.
     /// </summary>
     public class InvalidRefreshTokenException : Exception

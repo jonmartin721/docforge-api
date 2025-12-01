@@ -12,7 +12,13 @@ namespace DocumentGenerator.API.Extensions
             {
                 throw new UnauthorizedAccessException("User ID not found in token");
             }
-            return Guid.Parse(userIdClaim.Value);
+
+            if (!Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                throw new UnauthorizedAccessException("Invalid user identifier");
+            }
+
+            return userId;
         }
     }
 }

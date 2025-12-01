@@ -11,5 +11,9 @@ namespace DocumentGenerator.Core.Entities
         public string Role { get; set; } = "User";
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
+
+        // Account lockout properties
+        public int FailedLoginAttempts { get; set; }
+        public DateTime? LockoutEnd { get; set; }
     }
 }

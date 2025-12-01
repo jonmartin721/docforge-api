@@ -49,21 +49,52 @@ namespace DocumentGenerator.Infrastructure.Services
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("User registered successfully: {Username}", registerDto.Username);
-            return GenerateAuthResponse(user);
+            return await GenerateAuthResponseAsync(user);
         }
+
+        private const int MaxFailedLoginAttempts = 5;
+        private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
 
+            // Check if account is locked
+            if (user?.LockoutEnd != null && user.LockoutEnd > DateTime.UtcNow)
+            {
+                _logger.LogWarning("Login attempt on locked account: {Username}", loginDto.Username);
+                throw new AccountLockedException(user.LockoutEnd.Value);
+            }
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
             {
                 _logger.LogWarning("Failed login attempt for username: {Username}", loginDto.Username);
+
+                // Track failed attempts if user exists
+                if (user != null)
+                {
+                    user.FailedLoginAttempts++;
+                    if (user.FailedLoginAttempts >= MaxFailedLoginAttempts)
+                    {
+                        user.LockoutEnd = DateTime.UtcNow.Add(LockoutDuration);
+                        _logger.LogWarning("Account locked due to {Count} failed attempts: {Username}",
+                            user.FailedLoginAttempts, loginDto.Username);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
                 throw new InvalidCredentialsException();
             }
 
+            // Reset failed attempts on successful login
+            if (user.FailedLoginAttempts > 0 || user.LockoutEnd != null)
+            {
+                user.FailedLoginAttempts = 0;
+                user.LockoutEnd = null;
+            }
+
             _logger.LogInformation("User logged in successfully: {Username}", loginDto.Username);
-            return GenerateAuthResponse(user);
+            return await GenerateAuthResponseAsync(user);
         }
 
         public async Task<AuthResponseDto> RefreshTokenAsync(string token, string refreshToken)
@@ -77,10 +108,10 @@ namespace DocumentGenerator.Infrastructure.Services
             }
 
             _logger.LogInformation("Token refreshed for user: {Username}", user.Username);
-            return GenerateAuthResponse(user);
+            return await GenerateAuthResponseAsync(user);
         }
 
-        private AuthResponseDto GenerateAuthResponse(User user)
+        private async Task<AuthResponseDto> GenerateAuthResponseAsync(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
@@ -103,7 +134,7 @@ namespace DocumentGenerator.Infrastructure.Services
 
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return new AuthResponseDto
             {

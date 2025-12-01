@@ -89,7 +89,7 @@ namespace DocumentGenerator.Tests.Integration
             {
                 Username = $"user_{Guid.NewGuid()}",
                 Email = $"user_{Guid.NewGuid()}@example.com",
-                Password = "password123"
+                Password = "Password123!"
             };
             var response = await _client.PostAsJsonAsync("/api/auth/register", registerDto);
             response.EnsureSuccessStatusCode();

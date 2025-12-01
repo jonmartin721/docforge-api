@@ -61,7 +61,7 @@ namespace DocumentGenerator.Tests.Integration
             {
                 Username = $"flowuser_{uniqueId}",
                 Email = $"flow_{uniqueId}@example.com",
-                Password = "password123"
+                Password = "Password123!"
             };
             var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerDto);
             registerResponse.EnsureSuccessStatusCode();

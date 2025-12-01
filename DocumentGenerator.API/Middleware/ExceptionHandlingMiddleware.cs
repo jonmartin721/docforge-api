@@ -55,6 +55,11 @@ namespace DocumentGenerator.API.Middleware
                     response.Message = exception.Message;
                     break;
 
+                case AccountLockedException lockedException:
+                    context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+                    response.Message = lockedException.Message;
+                    break;
+
                 case TemplateCompilationException:
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     response.Message = exception.Message;
@@ -75,9 +80,19 @@ namespace DocumentGenerator.API.Middleware
                     response.Message = "Unauthorized";
                     break;
 
-                case ArgumentException argEx:
+                case ArgumentException:
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    response.Message = argEx.Message;
+                    response.Message = "Invalid request parameters";
+                    break;
+
+                case InvalidOperationException:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    response.Message = "Operation could not be completed";
+                    break;
+
+                case FileNotFoundException:
+                    context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    response.Message = "Requested file not found";
                     break;
 
                 default:

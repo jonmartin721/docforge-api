@@ -50,7 +50,7 @@ namespace DocumentGenerator.Tests.Unit
             {
                 Username = "testuser",
                 Email = "test@example.com",
-                Password = "password123"
+                Password = "Password123!"
             };
 
             // Act
@@ -83,7 +83,7 @@ namespace DocumentGenerator.Tests.Unit
             {
                 Username = "testuser",
                 Email = "new@example.com",
-                Password = "password123"
+                Password = "Password123!"
             };
 
             // Act

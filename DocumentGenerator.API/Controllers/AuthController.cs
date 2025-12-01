@@ -33,5 +33,14 @@ namespace DocumentGenerator.API.Controllers
             var result = await _authService.LoginAsync(loginDto);
             return Ok(result);
         }
+
+        [HttpPost("refresh")]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<AuthResponseDto>> RefreshToken(RefreshTokenDto refreshTokenDto)
+        {
+            var result = await _authService.RefreshTokenAsync(refreshTokenDto.Token, refreshTokenDto.RefreshToken);
+            return Ok(result);
+        }
     }
 }
