@@ -3,7 +3,29 @@ import { Link } from 'react-router-dom';
 import { templateService } from '../services/templateService';
 import { documentService } from '../services/documentService';
 import Navbar from '../components/Navbar';
+import { formatDateTime } from '../utils/dateUtils';
 import './Dashboard.css';
+
+// Extract first few key-value pairs from metadata for preview
+function getMetadataPreview(metadataStr, maxItems = 2) {
+  if (!metadataStr) return null;
+  try {
+    const data = JSON.parse(metadataStr);
+    if (typeof data !== 'object' || data === null) return null;
+
+    const entries = Object.entries(data)
+      .filter(([, v]) => typeof v === 'string' || typeof v === 'number')
+      .slice(0, maxItems)
+      .map(([key, value]) => ({
+        key: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+        value: String(value).length > 20 ? String(value).slice(0, 20) + '...' : String(value)
+      }));
+
+    return entries.length > 0 ? entries : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -88,17 +110,32 @@ export default function Dashboard() {
             <p className="text-muted text-center">No documents yet</p>
           ) : (
             <div className="recent-list">
-              {stats.recentDocs.map((doc) => (
-                <div key={doc.id} className="recent-item">
-                  <span className="recent-icon">📄</span>
-                  <div className="recent-info">
-                    <div className="recent-name">{doc.fileName}</div>
-                    <div className="text-muted">
-                      {new Date(doc.generatedAt).toLocaleDateString()}
+              {stats.recentDocs.map((doc) => {
+                const metadataPreview = getMetadataPreview(doc.metadata);
+                return (
+                  <div key={doc.id} className="recent-item">
+                    <span className="recent-icon">📄</span>
+                    <div className="recent-info">
+                      <div className="recent-name">{doc.fileName}</div>
+                      <div className="recent-meta">
+                        <span className="recent-template">{doc.templateName}</span>
+                        <span className="text-muted">
+                          {formatDateTime(doc.generatedAt)}
+                        </span>
+                      </div>
+                      {metadataPreview && (
+                        <div className="recent-data">
+                          {metadataPreview.map((item, i) => (
+                            <span key={i} className="recent-data-item">
+                              {item.key}: {item.value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

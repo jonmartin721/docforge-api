@@ -108,6 +108,15 @@ h3 {
   cursor: not-allowed;
 }
 
+.btn:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn-danger:focus-visible {
+  outline-color: var(--danger);
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
@@ -228,7 +237,7 @@ textarea {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--space-lg);
+  padding: 0 var(--space-lg) var(--space-2xl);
 }
 
 /* Alert */

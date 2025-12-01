@@ -4,7 +4,6 @@
   min-height: 600px;
   background: var(--bg-secondary);
   overflow: hidden;
-  /* Border radius handled by wrapper in parent */
 }
 
 .vb-sidebar {
@@ -34,7 +33,7 @@
   margin-top: auto;
 }
 
-.vb-tools {
+.vb-elements {
   padding: var(--space-md);
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -42,7 +41,7 @@
   overflow-y: auto;
 }
 
-.vb-tool {
+.vb-element {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -52,31 +51,38 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  cursor: pointer;
+  cursor: grab;
   transition: all var(--transition-fast);
   color: var(--text-secondary);
   height: 100px;
+  user-select: none;
 }
 
-.vb-tool:hover {
+.vb-element:hover {
   border-color: var(--primary);
   background: rgba(var(--primary-rgb), 0.05);
-  /* Fallback if rgb var not set, but using border color mainly */
   color: var(--primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-.vb-tool:active {
+.vb-element:active {
+  cursor: grabbing;
   transform: translateY(0);
 }
 
-.vb-tool-icon {
+.vb-element.dragging {
+  opacity: 0.5;
+  border-style: dashed;
+  cursor: grabbing;
+}
+
+.vb-element-icon {
   font-size: 1.5rem;
   font-weight: bold;
 }
 
-.vb-tool-label {
+.vb-element-label {
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -89,53 +95,49 @@
   position: relative;
 }
 
-.vb-canvas-container {
-  flex: 1;
-  background: var(--bg-primary);
-  padding: var(--space-xl);
-  overflow: auto;
-  display: flex;
-  justify-content: center;
-  /* Pattern background for professional look */
-  background-image: radial-gradient(var(--border) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
+/* Canvas - now uses relative positioning for absolute children */
 .vb-canvas {
+  position: relative;
   width: 210mm;
   min-height: 297mm;
+  margin: var(--space-xl) auto;
   background: white;
   color: black;
-  padding: 20mm;
   box-shadow: var(--shadow-xl);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: var(--space-2xl);
-  /* Space for scrolling past bottom */
+  overflow: visible;
 }
 
-/* Block Styles */
+.vb-canvas.drag-active {
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+}
+
+/* Block Styles - absolute positioning */
 .vb-block {
-  position: relative;
+  position: absolute;
   border: 2px solid transparent;
   border-radius: 4px;
-  padding: 4px;
-  transition: border-color 0.2s;
+  padding: 8px;
+  box-sizing: border-box;
+  cursor: move;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .vb-block:hover {
-  border-color: rgba(0, 0, 255, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
 .vb-block.selected {
   border-color: var(--primary);
-  background: rgba(0, 0, 255, 0.02);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .vb-block.dragging {
-  opacity: 0.5;
+  opacity: 0.8;
   border-style: dashed;
+  cursor: grabbing;
+  z-index: 100;
 }
 
 .vb-block-actions {
@@ -188,7 +190,70 @@
   height: 28px;
 }
 
-/* Properties Panel (if selected) */
+/* Resize handle */
+.resize-handle {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 12px;
+  height: 12px;
+  background: var(--primary);
+  border: 2px solid white;
+  border-radius: 2px;
+  cursor: se-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.vb-block:hover .resize-handle,
+.vb-block.selected .resize-handle {
+  opacity: 1;
+}
+
+/* Ghost preview for dragging new elements */
+.vb-block-ghost {
+  position: absolute;
+  border: 2px dashed var(--primary);
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Snap guide lines */
+.vb-snap-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.vb-snap-line.vertical {
+  width: 1px;
+  top: 0;
+  bottom: 0;
+  background: #3b82f6;
+}
+
+.vb-snap-line.horizontal {
+  height: 1px;
+  left: 0;
+  right: 0;
+  background: #3b82f6;
+}
+
+.vb-snap-line.center {
+  background: #8b5cf6;
+}
+
+.vb-snap-line.canvas {
+  background: #10b981;
+}
+
+.vb-snap-line.edge {
+  background: #f59e0b;
+}
+
+/* Properties Panel */
 .vb-properties {
   width: 280px;
   background: var(--bg-tertiary);
@@ -200,6 +265,7 @@
   bottom: 0;
   overflow-y: auto;
   box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+  z-index: 50;
 }
 
 .vb-properties h4 {
@@ -220,10 +286,48 @@
   color: var(--text-secondary);
 }
 
+.prop-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.prop-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-sm);
+}
+
+.prop-field span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.prop-field input[type="number"] {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: var(--space-sm) 0;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  width: 100%;
+  min-width: 0;
+}
+
+.prop-field input[type="number"]:focus {
+  outline: none;
+}
+
 /* Content Styles */
 .vb-content {
   outline: none;
   min-height: 1.5em;
+  cursor: text;
 }
 
 .vb-content:empty:before {
@@ -231,31 +335,128 @@
   color: #ccc;
 }
 
-.vb-heading1 h1 {
-  margin: 0;
+.vb-heading1 {
+  font-size: 2rem;
+  font-weight: bold;
 }
 
-.vb-heading2 h2 {
-  margin: 0;
+.vb-heading2 {
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
-.vb-heading3 h3 {
-  margin: 0;
+.vb-heading3 {
+  font-size: 1.25rem;
+  font-weight: bold;
 }
 
-.vb-text p {
-  margin: 0;
+.vb-text {
+  font-size: 1rem;
+}
+
+/* Table styles */
+.vb-table-wrapper {
+  outline: none;
+  cursor: text;
+}
+
+.vb-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.vb-table-wrapper th,
+.vb-table-wrapper td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.vb-table-wrapper th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+.vb-table-wrapper tr:hover td {
+  background: #fafafa;
+}
+
+/* Table controls in properties panel */
+.table-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.table-controls .btn {
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.8rem;
+}
+
+.table-count {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* Empty State */
 .vb-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 300px;
+  padding: 3rem;
   color: #999;
   font-style: italic;
-  border: 2px dashed #eee;
+  border: 2px dashed #ddd;
   border-radius: 8px;
-  margin: 2rem;
+  pointer-events: none;
+}
+
+/* Button group for alignment */
+.btn-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.btn-group button {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+.btn-group button:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.btn-group button:hover {
+  background: var(--bg-primary);
+}
+
+.btn-group button.active {
+  background: var(--primary);
+  color: white;
+}
+
+/* Color input styling */
+.prop-group input[type="color"] {
+  width: 100%;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }

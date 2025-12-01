@@ -52,13 +52,15 @@ export default function TemplateEditor({ value, onChange }) {
         <div className="editor-pane preview-pane">
           <div className="pane-header">Live Preview</div>
           <div className="preview-container">
-            <div className="preview-paper">
-              <div
-                className="preview-content"
-                dangerouslySetInnerHTML={{
-                  __html: (value || '').replace(/{{(.*?)}}/g, '<span class="var-highlight">$1</span>')
-                }}
-              />
+            <div className="preview-scaler">
+              <div className="preview-paper">
+                <div
+                  className="preview-content"
+                  dangerouslySetInnerHTML={{
+                    __html: (value || '').replace(/{{(.*?)}}/g, '<span class="var-highlight">$1</span>')
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -2,8 +2,29 @@ import { useState, useEffect } from 'react';
 import { documentService } from '../services/documentService';
 import Navbar from '../components/Navbar';
 import Modal from '../components/Modal';
-import { formatDate } from '../utils/dateUtils';
+import { formatDateTime } from '../utils/dateUtils';
 import './DocumentsPage.css';
+
+// Extract first few key-value pairs from metadata for preview
+function getMetadataPreview(metadataStr, maxItems = 3) {
+  if (!metadataStr) return null;
+  try {
+    const data = JSON.parse(metadataStr);
+    if (typeof data !== 'object' || data === null) return null;
+
+    const entries = Object.entries(data)
+      .filter(([, v]) => typeof v === 'string' || typeof v === 'number')
+      .slice(0, maxItems)
+      .map(([key, value]) => ({
+        key: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+        value: String(value).length > 30 ? String(value).slice(0, 30) + '...' : String(value)
+      }));
+
+    return entries.length > 0 ? entries : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState([]);
@@ -105,41 +126,52 @@ export default function DocumentsPage() {
           </div>
         ) : (
           <div className="documents-list">
-            {documents.map((doc) => (
-              <div key={doc.id} className="document-card card">
-                <div className="document-icon">📄</div>
-                <div className="document-info">
-                  <h3 className="mb-sm">{doc.fileName}</h3>
-                  <div className="document-meta">
-                    <span className="text-muted">
-                      Generated {formatDate(doc.generatedAt)}
-                    </span>
-                    <span className="text-muted">•</span>
-                    <span className="text-muted">{doc.templateName}</span>
+            {documents.map((doc) => {
+              const metadataPreview = getMetadataPreview(doc.metadata);
+              return (
+                <div key={doc.id} className="document-card card">
+                  <div className="document-icon">📄</div>
+                  <div className="document-info">
+                    <h3 className="mb-xs">{doc.fileName}</h3>
+                    <div className="document-meta mb-sm">
+                      <span className="template-badge">{doc.templateName}</span>
+                      <span className="text-muted">
+                        {formatDateTime(doc.generatedAt)}
+                      </span>
+                    </div>
+                    {metadataPreview && (
+                      <div className="document-data-preview">
+                        {metadataPreview.map((item, i) => (
+                          <span key={i} className="data-tag">
+                            <span className="data-key">{item.key}:</span> {item.value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="document-actions flex gap-sm">
+                    <button
+                      onClick={() => handleView(doc.id)}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleDownload(doc.id, doc.fileName)}
+                      className="btn btn-primary btn-sm"
+                    >
+                      Download
+                    </button>
+                    <button
+                      onClick={() => confirmDelete(doc.id)}
+                      className="btn btn-danger btn-sm"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-                <div className="document-actions flex gap-sm">
-                  <button
-                    onClick={() => handleView(doc.id)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    View
-                  </button>
-                  <button
-                    onClick={() => handleDownload(doc.id, doc.fileName)}
-                    className="btn btn-primary btn-sm"
-                  >
-                    Download
-                  </button>
-                  <button
-                    onClick={() => confirmDelete(doc.id)}
-                    className="btn btn-danger btn-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

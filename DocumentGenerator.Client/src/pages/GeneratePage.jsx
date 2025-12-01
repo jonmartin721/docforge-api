@@ -13,7 +13,9 @@ export default function GeneratePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [count, setCount] = useState(1);
+  const [customCount, setCustomCount] = useState(false);
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -51,12 +53,22 @@ export default function GeneratePage() {
   const handleGenerate = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setGenerating(true);
 
     try {
       const parsedData = JSON.parse(jsonData);
-      await documentService.generate(templateId, parsedData);
-      setSuccess(true);
+      const numCopies = Math.max(1, Math.min(100, count)); // Clamp between 1-100
+
+      if (numCopies === 1) {
+        await documentService.generate(templateId, parsedData);
+        setSuccess('Document generated successfully! Redirecting...');
+      } else {
+        // Create array of identical data items for batch
+        const dataItems = Array(numCopies).fill(parsedData);
+        const result = await documentService.generateBatch(templateId, dataItems);
+        setSuccess(`${result.successCount} document${result.successCount !== 1 ? 's' : ''} generated successfully! Redirecting...`);
+      }
 
       setTimeout(() => {
         navigate(`/documents`);
@@ -104,11 +116,7 @@ export default function GeneratePage() {
         <p className="text-muted mb-lg">Using template: {template.name}</p>
 
         {error && <div className="alert alert-error">{error}</div>}
-        {success && (
-          <div className="alert alert-success">
-            Document generated successfully! Redirecting...
-          </div>
-        )}
+        {success && <div className="alert alert-success">{success}</div>}
 
         <div className="generate-layout">
           <div className="card">
@@ -128,13 +136,63 @@ export default function GeneratePage() {
                   style={{ fontFamily: 'Monaco, monospace' }}
                 />
               </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={generating}
-              >
-                {generating ? 'Generating...' : '📄 Generate PDF'}
-              </button>
+              <div className="generate-actions">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={generating}
+                >
+                  {generating ? 'Generating...' : '📄 Generate PDF'}
+                </button>
+{customCount ? (
+                  <div className="custom-count-input">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={count}
+                      onChange={(e) => setCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                      disabled={generating}
+                      autoFocus
+                    />
+                    <span>copies</span>
+                    <button
+                      type="button"
+                      className="custom-count-close"
+                      onClick={() => {
+                        setCustomCount(false);
+                        if (![1, 5, 10, 25, 50, 100].includes(count)) {
+                          setCount(1);
+                        }
+                      }}
+                      disabled={generating}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    className="copies-select"
+                    value={[1, 5, 10, 25, 50, 100].includes(count) ? count : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setCustomCount(true);
+                      } else {
+                        setCount(parseInt(e.target.value));
+                      }
+                    }}
+                    disabled={generating}
+                  >
+                    <option value={1}>1 copy</option>
+                    <option value={5}>5 copies</option>
+                    <option value={10}>10 copies</option>
+                    <option value={25}>25 copies</option>
+                    <option value={50}>50 copies</option>
+                    <option value={100}>100 copies</option>
+                    <option value="custom">Custom...</option>
+                  </select>
+                )}
+              </div>
             </form>
           </div>
         </div>

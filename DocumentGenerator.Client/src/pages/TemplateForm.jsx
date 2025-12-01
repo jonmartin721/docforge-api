@@ -16,6 +16,7 @@ export default function TemplateForm() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'code'
+    const [visualBuilderKey, setVisualBuilderKey] = useState(0);
 
     useEffect(() => {
         const loadTemplate = async () => {
@@ -108,7 +109,12 @@ export default function TemplateForm() {
                                     <button
                                         type="button"
                                         className={`mode-toggle-btn ${editorMode === 'visual' ? 'active' : ''}`}
-                                        onClick={() => setEditorMode('visual')}
+                                        onClick={() => {
+                                            if (editorMode !== 'visual') {
+                                                setVisualBuilderKey(k => k + 1); // Force remount to re-parse content
+                                            }
+                                            setEditorMode('visual');
+                                        }}
                                     >
                                         <span className="icon">🎨</span> Visual Builder
                                     </button>
@@ -125,6 +131,7 @@ export default function TemplateForm() {
                             {editorMode === 'visual' ? (
                                 <div className="visual-builder-wrapper">
                                     <VisualBuilder
+                                        key={visualBuilderKey}
                                         initialContent={formData.content}
                                         onChange={(newContent) =>
                                             setFormData({ ...formData, content: newContent })

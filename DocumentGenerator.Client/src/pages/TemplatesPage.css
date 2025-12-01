@@ -159,6 +159,7 @@
   height: calc(100vh - 200px);
   /* Approximate available height */
   min-height: 600px;
+  margin-bottom: var(--space-lg);
 }
 
 .editor-header {
