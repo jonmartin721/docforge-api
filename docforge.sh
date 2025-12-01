@@ -193,8 +193,21 @@ print_header() {
     echo -e "${NC}"
     echo "==============================================="
     show_dependency_status
-    echo -e " Backend (API):    $(check_port $API_PORT) (Port $API_PORT)"
-    echo -e " Frontend (Client): $(check_port $CLIENT_PORT) (Port $CLIENT_PORT)"
+
+    # Backend status with link when up
+    if is_port_listening $API_PORT; then
+        echo -e " Backend (API):     ${GREEN}UP${NC}  → http://localhost:$API_PORT/swagger"
+    else
+        echo -e " Backend (API):     ${RED}DOWN${NC}"
+    fi
+
+    # Frontend status with link when up
+    if is_port_listening $CLIENT_PORT; then
+        echo -e " Frontend (Client): ${GREEN}UP${NC}  → http://localhost:$CLIENT_PORT"
+    else
+        echo -e " Frontend (Client): ${RED}DOWN${NC}"
+    fi
+
     echo "==============================================="
     echo ""
 }
@@ -474,16 +487,24 @@ kill_port() {
 do_view_logs() {
     LOG_FILE=$1
     NAME=$2
-    
+
     if [ ! -f "$LOG_FILE" ]; then
         echo -e "${RED}Log file $LOG_FILE not found.${NC}"
         wait_for_enter
         return
     fi
 
-    echo -e "${YELLOW}Viewing $NAME logs (Press Ctrl+C to exit)...${NC}"
-    sleep 1
-    tail -f "$LOG_FILE"
+    echo -e "${YELLOW}Viewing $NAME logs (Press Ctrl+C to return to menu)...${NC}"
+    echo ""
+
+    # Trap SIGINT to return to menu instead of exiting
+    trap 'echo ""; echo -e "${CYAN}Returning to menu...${NC}"; trap - INT; return 0' INT
+
+    # Use || true to prevent set -e from exiting on Ctrl+C
+    tail -f "$LOG_FILE" || true
+
+    # Restore default trap
+    trap - INT
 }
 
 do_open_browser() {
@@ -495,16 +516,17 @@ do_open_browser() {
 
     URL="http://localhost:$CLIENT_PORT"
     echo -e "${GREEN}Opening $URL...${NC}"
-    
-    if grep -q Microsoft /proc/version; then
-        # WSL
-        explorer.exe "$URL"
-    elif command -v xdg-open >/dev/null; then
-        # Linux
-        xdg-open "$URL"
-    elif command -v open >/dev/null; then
+
+    if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
+        # WSL - use Windows browser
+        cmd.exe /c start "$URL" 2>/dev/null || explorer.exe "$URL" 2>/dev/null || \
+            echo -e "${YELLOW}Could not open browser. Please open $URL manually.${NC}"
+    elif command -v open >/dev/null 2>&1; then
         # macOS
         open "$URL"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        # Linux with desktop
+        xdg-open "$URL"
     else
         echo -e "${RED}Could not detect browser opener. Please open $URL manually.${NC}"
     fi
@@ -642,8 +664,8 @@ while true; do
                 DEPENDENCY_STATUS=$((exit_code == 0 ? 0 : 1))
             else
                 echo -e "${RED}❌ Dependency checker not found${NC}"
-                wait_for_enter
             fi
+            wait_for_enter
             ;;
         8)
             do_view_logs "api.log" "Backend"
