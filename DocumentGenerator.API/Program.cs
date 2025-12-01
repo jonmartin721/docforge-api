@@ -68,7 +68,17 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("X-Frame-Options", "DENY");
     context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';");
+
+    // Relaxed CSP for Swagger UI in development
+    var path = context.Request.Path.Value ?? "";
+    if (app.Environment.IsDevelopment() && (path.StartsWith("/swagger") || path.StartsWith("/health")))
+    {
+        context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
+    }
+    else
+    {
+        context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';");
+    }
 
     // Add HSTS header for non-localhost requests
     if (!context.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
