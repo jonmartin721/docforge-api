@@ -9,6 +9,7 @@ obj/
 *.db-wal
 GeneratedDocuments/
 TestResults/
+coverage/
 
 # TUI Log Files
 *.log
