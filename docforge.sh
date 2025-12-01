@@ -402,8 +402,10 @@ do_start_frontend() {
 
     echo -e "${YELLOW}🚀 Starting Frontend...${NC}"
 
-    if (cd "$CLIENT_DIR" && npm run dev > ../client.log 2>&1 &); then
-        CLIENT_PID=$!
+    # Run npm from here with full path (avoid subshell so $! works)
+    npm --prefix "$CLIENT_DIR" run dev > client.log 2>&1 &
+    CLIENT_PID=$!
+    if [[ -n "$CLIENT_PID" ]]; then
         echo -e "${GREEN}✓ Frontend process started (PID: $CLIENT_PID)${NC}"
 
         # Wait for Vite to be ready (with timeout)
