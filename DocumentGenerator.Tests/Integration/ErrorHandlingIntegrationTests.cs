@@ -19,6 +19,8 @@ namespace DocumentGenerator.Tests.Integration
         {
             _factory = factory.WithWebHostBuilder(builder =>
             {
+                builder.UseSetting("environment", "Development");
+
                 builder.ConfigureServices(services =>
                 {
                     // Remove ALL EF Core related services to avoid provider conflicts
