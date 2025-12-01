@@ -61,19 +61,30 @@ curl -X POST http://localhost:5257/api/documents/generate \
 
 (Requires Docker OR .NET 8 SDK + Node.js 18+)
 
-**With Docker** (runs API only):
+**With Docker**:
 ```bash
 git clone https://github.com/jonmartin721/docforge-api.git
 cd docforge-api
-docker-compose up -d
 
-# Then start the frontend separately
-cd DocumentGenerator.Client
-npm install
-npm run dev
+# 1. Configure environment
+cp .env.example .env
+# Edit .env and set JWT_SECRET (minimum 32 characters)
+
+# 2. Build frontend and start everything
+docker-compose --profile build up docforge-frontend-builder  # Build frontend once
+docker-compose up -d                                          # Start API + nginx
 ```
 
-Then open:
+Then open http://localhost (nginx serves both frontend and API).
+
+**For development** (hot reload on frontend):
+```bash
+cp .env.example .env  # Set JWT_SECRET
+docker-compose up -d docforge-api  # API only
+
+# Frontend with hot reload (separate terminal)
+cd DocumentGenerator.Client && npm install && npm run dev
+```
 - **Frontend**: http://localhost:5173
 - **API**: http://localhost:5000/swagger
 
@@ -112,7 +123,7 @@ chmod +x docforge.sh && ./docforge.sh
 - **Works offline** - No external API calls, runs entirely on your infrastructure
 - **Handles the hard parts** - Chrome rendering, proper fonts, page breaks that don't suck
 - **Multi-user ready** - JWT auth built in, not bolted on later
-- **Docker support** - API runs in container, frontend runs locally (Vite)
+- **Docker support** - Full stack runs in containers, or API-only for development with hot reload
 
 ## Architecture
 

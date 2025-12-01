@@ -13,6 +13,11 @@ TestResults/
 # TUI Log Files
 *.log
 
+# Environment files (contains secrets)
+.env
+.env.local
+.env.*.local
+
 # Node
 node_modules/
 npm-debug.log*

@@ -11,12 +11,12 @@ services:
     ports:
       - "5000:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Data Source=/app/data/documentgenerator.db
-      - JwtSettings__Secret=THIS_IS_A_SUPER_SECRET_KEY_FOR_JWT_TOKEN_GENERATION_AT_LEAST_32_CHARS
-      - JwtSettings__Issuer=DocForge
-      - JwtSettings__Audience=DocForgeUsers
-      - JwtSettings__ExpirationMinutes=60
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ConnectionStrings__DefaultConnection=${DATABASE_CONNECTION_STRING:-Data Source=/app/data/documentgenerator.db}
+      - JwtSettings__Secret=${JWT_SECRET:?JWT_SECRET is required - copy .env.example to .env}
+      - JwtSettings__Issuer=${JWT_ISSUER:-DocForge}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-DocForge}
+      - JwtSettings__ExpirationMinutes=${JWT_EXPIRATION_MINUTES:-60}
     volumes:
       - ./data:/app/data
       - ./GeneratedDocuments:/app/GeneratedDocuments
