@@ -283,19 +283,7 @@ Planned features (contributions welcome):
 
 ## Contributing
 
-PRs are welcome and will be reviewed promptly.
-
-**Quick contribution ideas:**
-- Add template examples (invoices, tickets, certificates)
-- Improve error messages
-- Add tests for edge cases
-
-**Standard workflow:**
-1. Fork it
-2. Create your feature branch (`git checkout -b feature/cool-thing`)
-3. Commit your changes (`git commit -am 'Add cool thing'`)
-4. Push to the branch (`git push origin feature/cool-thing`)
-5. Open a Pull Request
+PRs welcome - fork, branch, and open a PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for commit conventions and guidelines.
 
 ## License
 
