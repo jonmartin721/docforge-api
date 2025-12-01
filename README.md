@@ -3,6 +3,7 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
+[![codecov](https://codecov.io/gh/jonmartin721/docforge-api/graph/badge.svg)](https://codecov.io/gh/jonmartin721/docforge-api)
 
 Stop fighting with PDF libraries. Write HTML templates, get PDFs back.
 
