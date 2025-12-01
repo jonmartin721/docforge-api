@@ -512,6 +512,7 @@ export default function VisualBuilder({ initialContent, onChange }) {
       <div className="vb-sidebar">
         <div className="vb-sidebar-header">
           Elements
+          <span className="vb-drag-hint">Drag or click to add</span>
         </div>
         <div className="vb-elements">
           {[
@@ -536,6 +537,152 @@ export default function VisualBuilder({ initialContent, onChange }) {
             </div>
           ))}
         </div>
+
+        {selectedBlock && (
+          <div className="vb-properties">
+            <div className="vb-sidebar-header">Properties</div>
+
+            <div className="vb-properties-content">
+              <div className="prop-group">
+                <label>Position</label>
+                <div className="prop-row">
+                  <div className="prop-field">
+                    <span>X</span>
+                    <input
+                      type="number"
+                      value={Math.round(selectedBlock.position.x)}
+                      onChange={(e) => updateBlockPosition(selectedBlock.id, {
+                        ...selectedBlock.position,
+                        x: parseInt(e.target.value) || 0
+                      })}
+                    />
+                  </div>
+                  <div className="prop-field">
+                    <span>Y</span>
+                    <input
+                      type="number"
+                      value={Math.round(selectedBlock.position.y)}
+                      onChange={(e) => updateBlockPosition(selectedBlock.id, {
+                        ...selectedBlock.position,
+                        y: parseInt(e.target.value) || 0
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="prop-group">
+                <label>Size</label>
+                <div className="prop-row">
+                  <div className="prop-field">
+                    <span>W</span>
+                    <input
+                      type="number"
+                      value={Math.round(selectedBlock.size.width)}
+                      onChange={(e) => updateBlockSize(selectedBlock.id, {
+                        width: parseInt(e.target.value) || 100
+                      })}
+                    />
+                  </div>
+                  <div className="prop-field">
+                    <span>H</span>
+                    <input
+                      type="number"
+                      value={Math.round(selectedBlock.size.height)}
+                      onChange={(e) => updateBlockSize(selectedBlock.id, {
+                        height: parseInt(e.target.value) || 24
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="prop-group">
+                <label>Text Align</label>
+                <div className="btn-group">
+                  <button
+                    type="button"
+                    className={selectedBlock.styles.textAlign === 'left' ? 'active' : ''}
+                    onClick={() => updateBlockStyle(selectedBlock.id, 'textAlign', 'left')}
+                  >
+                    Left
+                  </button>
+                  <button
+                    type="button"
+                    className={selectedBlock.styles.textAlign === 'center' ? 'active' : ''}
+                    onClick={() => updateBlockStyle(selectedBlock.id, 'textAlign', 'center')}
+                  >
+                    Center
+                  </button>
+                  <button
+                    type="button"
+                    className={selectedBlock.styles.textAlign === 'right' ? 'active' : ''}
+                    onClick={() => updateBlockStyle(selectedBlock.id, 'textAlign', 'right')}
+                  >
+                    Right
+                  </button>
+                </div>
+              </div>
+
+              <div className="prop-group">
+                <label>Color</label>
+                <input
+                  type="color"
+                  value={selectedBlock.styles.color === 'inherit' ? '#000000' : selectedBlock.styles.color}
+                  onChange={(e) => updateBlockStyle(selectedBlock.id, 'color', e.target.value)}
+                />
+              </div>
+
+              {selectedBlock.type === 'table' && (
+                <>
+                  <div className="prop-group">
+                    <label>Columns</label>
+                    <div className="table-controls">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => removeTableColumn(selectedBlock.id)}
+                        disabled={getTableInfo(selectedBlock)?.cols <= 1}
+                      >
+                        −
+                      </button>
+                      <span className="table-count">{getTableInfo(selectedBlock)?.cols || 0}</span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => addTableColumn(selectedBlock.id)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="prop-group">
+                    <label>Rows</label>
+                    <div className="table-controls">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => removeTableRow(selectedBlock.id)}
+                        disabled={getTableInfo(selectedBlock)?.rows <= 2}
+                      >
+                        −
+                      </button>
+                      <span className="table-count">{(getTableInfo(selectedBlock)?.rows || 1) - 1}</span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => addTableRow(selectedBlock.id)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="vb-sidebar-footer">
           <button type="button" className="btn btn-danger w-full" onClick={handleClear}>
@@ -661,150 +808,6 @@ export default function VisualBuilder({ initialContent, onChange }) {
             );
           })}
         </div>
-
-        {selectedBlock && (
-          <div className="vb-properties">
-            <h4>Properties</h4>
-
-            <div className="prop-group">
-              <label>Position</label>
-              <div className="prop-row">
-                <div className="prop-field">
-                  <span>X</span>
-                  <input
-                    type="number"
-                    value={Math.round(selectedBlock.position.x)}
-                    onChange={(e) => updateBlockPosition(selectedBlock.id, {
-                      ...selectedBlock.position,
-                      x: parseInt(e.target.value) || 0
-                    })}
-                  />
-                </div>
-                <div className="prop-field">
-                  <span>Y</span>
-                  <input
-                    type="number"
-                    value={Math.round(selectedBlock.position.y)}
-                    onChange={(e) => updateBlockPosition(selectedBlock.id, {
-                      ...selectedBlock.position,
-                      y: parseInt(e.target.value) || 0
-                    })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="prop-group">
-              <label>Size</label>
-              <div className="prop-row">
-                <div className="prop-field">
-                  <span>W</span>
-                  <input
-                    type="number"
-                    value={Math.round(selectedBlock.size.width)}
-                    onChange={(e) => updateBlockSize(selectedBlock.id, {
-                      width: parseInt(e.target.value) || 100
-                    })}
-                  />
-                </div>
-                <div className="prop-field">
-                  <span>H</span>
-                  <input
-                    type="number"
-                    value={Math.round(selectedBlock.size.height)}
-                    onChange={(e) => updateBlockSize(selectedBlock.id, {
-                      height: parseInt(e.target.value) || 24
-                    })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="prop-group">
-              <label>Text Align</label>
-              <div className="btn-group">
-                <button
-                  type="button"
-                  className={selectedBlock.styles.textAlign === 'left' ? 'active' : ''}
-                  onClick={() => updateBlockStyle(selectedBlock.id, 'textAlign', 'left')}
-                >
-                  Left
-                </button>
-                <button
-                  type="button"
-                  className={selectedBlock.styles.textAlign === 'center' ? 'active' : ''}
-                  onClick={() => updateBlockStyle(selectedBlock.id, 'textAlign', 'center')}
-                >
-                  Center
-                </button>
-                <button
-                  type="button"
-                  className={selectedBlock.styles.textAlign === 'right' ? 'active' : ''}
-                  onClick={() => updateBlockStyle(selectedBlock.id, 'textAlign', 'right')}
-                >
-                  Right
-                </button>
-              </div>
-            </div>
-
-            <div className="prop-group">
-              <label>Color</label>
-              <input
-                type="color"
-                value={selectedBlock.styles.color === 'inherit' ? '#000000' : selectedBlock.styles.color}
-                onChange={(e) => updateBlockStyle(selectedBlock.id, 'color', e.target.value)}
-              />
-            </div>
-
-            {selectedBlock.type === 'table' && (
-              <>
-                <div className="prop-group">
-                  <label>Columns</label>
-                  <div className="table-controls">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary"
-                      onClick={() => removeTableColumn(selectedBlock.id)}
-                      disabled={getTableInfo(selectedBlock)?.cols <= 1}
-                    >
-                      − Remove
-                    </button>
-                    <span className="table-count">{getTableInfo(selectedBlock)?.cols || 0}</span>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary"
-                      onClick={() => addTableColumn(selectedBlock.id)}
-                    >
-                      + Add
-                    </button>
-                  </div>
-                </div>
-
-                <div className="prop-group">
-                  <label>Rows</label>
-                  <div className="table-controls">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary"
-                      onClick={() => removeTableRow(selectedBlock.id)}
-                      disabled={getTableInfo(selectedBlock)?.rows <= 2}
-                    >
-                      − Remove
-                    </button>
-                    <span className="table-count">{(getTableInfo(selectedBlock)?.rows || 1) - 1}</span>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary"
-                      onClick={() => addTableRow(selectedBlock.id)}
-                    >
-                      + Add
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       <Modal
