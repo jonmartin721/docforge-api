@@ -6,27 +6,11 @@
 
 Stop fighting with PDF libraries. Write HTML templates, get PDFs back.
 
+![DocForge Demo](docs/demo.gif)
+
 DocForge is a .NET 8 API + React frontend for generating PDFs from templates. You write HTML with Handlebars variables, POST your JSON data, get a PDF. That's it.
 
 Good for invoices, reports, certificates - anything where the layout stays the same but the data changes.
-
-## Architecture
-
-DocForge follows a clean architecture pattern with **4 projects**:
-
-```
-DocForge/
-├── DocumentGenerator.API/          # Web API layer (Controllers, endpoints)
-├── DocumentGenerator.Core/         # Business logic (Entities, DTOs, Validators)
-├── DocumentGenerator.Infrastructure/ # Data access & services (EF Core, PDF generation)
-└── DocumentGenerator.Tests/        # Unit and integration tests
-└── DocumentGenerator.Client/       # React frontend (separate folder)
-```
-
-- **API**: Web controllers, authentication, Swagger documentation
-- **Core**: Domain models, business rules, validation logic
-- **Infrastructure**: Entity Framework, PuppeteerSharp PDF generation, external services
-- **Tests**: xUnit tests with in-memory database for integration testing
 
 ## When to use DocForge
 
@@ -65,9 +49,11 @@ curl -X POST http://localhost:5257/api/documents/generate \
       "total": "250.00"
     }
   }'
+
+# Response: {"id": "abc-123", "downloadUrl": "/api/documents/abc-123/download"}
 ```
 
-**Result:** A formatted PDF invoice in the response.
+**Result:** A formatted PDF invoice ready to download.
 
 ![Dashboard](docs/images/dashboard.png)
 
@@ -128,7 +114,23 @@ chmod +x docforge.sh && ./docforge.sh
 - **Multi-user ready** - JWT auth built in, not bolted on later
 - **Docker support** - API runs in container, frontend runs locally (Vite)
 
+## Architecture
 
+DocForge follows a clean architecture pattern with **4 projects**:
+
+```
+DocForge/
+├── DocumentGenerator.API/          # Web API layer (Controllers, endpoints)
+├── DocumentGenerator.Core/         # Business logic (Entities, DTOs, Validators)
+├── DocumentGenerator.Infrastructure/ # Data access & services (EF Core, PDF generation)
+├── DocumentGenerator.Tests/        # Unit and integration tests
+└── DocumentGenerator.Client/       # React frontend (separate folder)
+```
+
+- **API**: Web controllers, authentication, Swagger documentation
+- **Core**: Domain models, business rules, validation logic
+- **Infrastructure**: Entity Framework, PuppeteerSharp PDF generation, external services
+- **Tests**: xUnit tests with in-memory database for integration testing
 
 ## Template Syntax
 
@@ -179,26 +181,11 @@ Test your templates in the frontend editor first - it catches syntax errors befo
 
 ## Tech Stack
 
-**Backend:**
-- .NET 8 Web API with clean architecture
-- Entity Framework Core 8.0.0 (SQLite for dev, PostgreSQL/SQL Server ready)
-- PuppeteerSharp (headless Chrome for PDF generation)
-- Handlebars.NET (templating engine)
-- FluentValidation (input validation)
-- AutoMapper (object mapping)
-- Serilog (structured logging)
-- BCrypt.Net-Next (password hashing)
-- JWT authentication with refresh tokens
-- xUnit + FluentAssertions + Moq for testing
+**Backend:** .NET 8 API, Entity Framework Core (SQLite), PuppeteerSharp (headless Chrome), Handlebars.NET, JWT auth with refresh tokens
 
-**Frontend:**
-- React 19.2.0 with Vite 7.2.2
-- React Router DOM 7.9.6 for navigation
-- Axios for API calls with JWT interceptors
-- @dnd-kit 6.3.1 for drag-and-drop template editor
-- Lucide React for icons
-- Vitest 4.0.14 + Testing Library for testing
-- Vanilla CSS with Google Fonts (Inter)
+**Frontend:** React 19, Vite, drag-and-drop editor with @dnd-kit, Vitest for testing
+
+Full dependency versions in `package.json` and `.csproj` files.
 
 ## API Endpoints
 
@@ -260,73 +247,19 @@ ASPNETCORE_ENVIRONMENT=Development
 
 ## Testing
 
-### Backend Testing (.NET)
-
-Run all backend tests:
-```bash
-dotnet test
-```
-
-Run tests with coverage:
-```bash
-dotnet test --collect:"XPlat Code Coverage"
-```
-
-**Testing Stack:**
-- **xUnit** 2.9.3 - Test framework
-- **FluentAssertions** 8.8.0 - Readable assertions
-- **Moq** 4.20.72 - Mocking framework
-- **Microsoft.AspNetCore.Mvc.Testing** - Integration testing
-- **Entity Framework Core InMemory** - Database testing
-- **Coverlet Collector** 6.0.4 - Code coverage
-
-**Test Structure:**
-- Unit tests for business logic in Core layer
-- Integration tests for API endpoints
-- In-memory database for isolated testing
-- JWT authentication testing
-
-### Frontend Testing (React)
-
-Run frontend tests:
-```bash
-cd DocumentGenerator.Client
-npm test
-```
-
-Run tests in watch mode:
-```bash
-npm run test:watch
-```
-
-Generate coverage report:
-```bash
-npm run test:coverage
-```
-
-**Testing Stack:**
-- **Vitest** 4.0.14 - Fast test runner
-- **Testing Library** 16.2.0 - React component testing
-- **Testing Library User Event** 14.6.1 - User interaction simulation
-- **Jest DOM** 6.6.3 - Custom DOM matchers
-- **jsdom** - Browser environment simulation
-
-**Test Structure:**
-- Component testing for UI elements
-- Hook testing for state management
-- Integration testing for user workflows
-- API mocking for isolated testing
-
-### Running All Tests
-
-Run complete test suite (both frontend and backend):
 ```bash
 # Backend
 dotnet test
 
-# Frontend (in separate terminal)
+# Frontend
 cd DocumentGenerator.Client && npm test
+
+# With coverage
+dotnet test --collect:"XPlat Code Coverage"
+cd DocumentGenerator.Client && npm run test:coverage
 ```
+
+Backend uses xUnit + FluentAssertions + Moq with in-memory SQLite. Frontend uses Vitest + Testing Library.
 
 ## Security Notes
 
@@ -344,7 +277,7 @@ See [open issues](https://github.com/jonmartin721/docforge-api/issues) for curre
 
 Planned features (contributions welcome):
 - Template versioning (save history)
-- ~~Bulk generation (process 100s of PDFs from a CSV)~~ - Done! Use `/api/documents/generate-batch`
+- ✅ Bulk generation - Use `/api/documents/generate-batch`
 - Cloud storage (S3/Azure instead of local disk)
 - Template sharing (if there's interest)
 
